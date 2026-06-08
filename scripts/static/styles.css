@@ -291,6 +291,37 @@
       color: var(--line);
       flex-shrink: 0;
     }
+    /* ── Intelligence tools strip ── */
+    .tools-strip {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 10px;
+      padding: 8px 14px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+    }
+    .tools-strip-label {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+      white-space: nowrap;
+      margin-right: 2px;
+    }
+    .tools-strip-group {
+      display: flex;
+      gap: 5px;
+    }
+    .tools-strip-divider {
+      width: 1px;
+      height: 20px;
+      background: var(--line);
+      margin: 0 4px;
+    }
+
     /* Two sibling ④ pills sit side-by-side with no arrow between them */
     .wf-output-group {
       display: flex;

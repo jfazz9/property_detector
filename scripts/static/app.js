@@ -21,8 +21,8 @@
     const aiButton       = document.querySelector("#ai-feedback");
     const estimateButton    = document.querySelector("#ai-estimate");
     const estimatePanel     = document.querySelector("#estimate-panel");
-    const oppScanButton     = document.querySelector("#opp-scan");
-    const oppPurposeFilter  = document.querySelector("#opp-purpose-filter");
+    const oppScanSaleBtn    = document.querySelector("#opp-scan-sale");
+    const oppScanRentBtn    = document.querySelector("#opp-scan-rent");
     const opportunityPanel  = document.querySelector("#opportunity-panel");
     const aiReportButton = document.querySelector("#ai-report");
     const agentPlanButton = document.querySelector("#agent-plan");
@@ -1309,12 +1309,11 @@
       }
     }
 
-    async function runOpportunityScan() {
+    async function runOpportunityScan(scanPurpose = "sale", buttonEl = oppScanSaleBtn) {
       const token = activeApiKey || tokenBox.value.trim();
-      const scanPurpose = oppPurposeFilter?.value || "both";
       if (!token) { error.hidden = false; error.textContent = "Add and check an OpenAI API key first (AI key button above)."; return; }
-      oppScanButton.disabled = true;
-      oppScanButton.textContent = "Scanning…";
+      buttonEl.disabled = true;
+      buttonEl.textContent = "Scanning…";
       error.hidden = true;
       opportunityPanel.hidden = false;
       opportunityPanel.innerHTML = `<div style="color:#c0411a;font-size:13px;">Scanning database for poachable listings…</div>`;
@@ -1428,8 +1427,8 @@
         error.textContent = err.message;
         opportunityPanel.hidden = true;
       } finally {
-        oppScanButton.disabled = false;
-        oppScanButton.textContent = "Opportunity scan";
+        buttonEl.disabled = false;
+        buttonEl.textContent = scanPurpose === "rent" ? "Rental opportunities" : "Sales opportunities";
       }
     }
 
@@ -1447,7 +1446,8 @@
     aiPanel.addEventListener("click", handleListingActionClick);
     aiButton.addEventListener("click", () => { ensureApiKeyVisible(); runAiFeedback(); });
     estimateButton.addEventListener("click", () => { ensureApiKeyVisible(); runEstimate(); });
-    oppScanButton.addEventListener("click", () => { ensureApiKeyVisible(); runOpportunityScan(); });
+    oppScanSaleBtn?.addEventListener("click", () => { ensureApiKeyVisible(); runOpportunityScan("sale", oppScanSaleBtn); });
+    oppScanRentBtn?.addEventListener("click", () => { ensureApiKeyVisible(); runOpportunityScan("rent", oppScanRentBtn); });
     aiReportButton.addEventListener("click", () => { ensureApiKeyVisible(); runBuildReport(); });
     agentPlanButton.addEventListener("click", () => { ensureApiKeyVisible(); runAgentPlan(); });
     clientReportButton.addEventListener("click", () => { ensureApiKeyVisible(); runClientReport(); });
