@@ -80,7 +80,12 @@
       padding: 8px 12px;
       margin-bottom: 10px;
     }
-    .key-bar.ready { border-color: var(--accent); background: #f0faf6; }
+    /* Compact confirmation bar shown briefly after key verification */
+    .key-bar.ready {
+      border-color: var(--accent);
+      background: #f0faf6;
+      padding: 5px 12px;
+    }
     .key-bar input {
       flex: 1;
       min-height: 32px;
@@ -329,11 +334,20 @@
       align-items: center;
     }
     /* Build Report button state after execution */
+    /* Auto-build on: slightly faded with an "AUTO" suffix so it reads
+       as "this runs automatically", not "this is broken" */
     #ai-report.build-auto {
-      opacity: 0.4;
+      opacity: 0.55;
       cursor: default;
       box-shadow: none;
     }
+    #ai-report.build-auto::after {
+      content: " · AUTO";
+      font-size: 10px;
+      letter-spacing: 0.06em;
+      font-weight: 600;
+    }
+    /* After a successful run: grey it fully out */
     #ai-report.build-done {
       opacity: 0.4;
       cursor: default;
@@ -406,12 +420,14 @@
       background: #085c4a;
       color: #fff;
     }
-    .chip.general { border-color: var(--accent-2); color: var(--accent-2); }
-    .chip.general:hover { background: #fffaf2; }
-    .chip.estimate { border-color: #6d3bbf; color: #6d3bbf; }
-    .chip.estimate:hover { background: #f5f0ff; }
-    .chip.opportunity { border-color: #c0411a; color: #c0411a; }
-    .chip.opportunity:hover { background: #fff4f0; }
+    /* General, Opportunity, and Estimate all share the amber accent —
+       they are all "insight" actions distinct from scenario workflow chips */
+    .chip.general,
+    .chip.opportunity,
+    .chip.estimate { border-color: var(--accent-2); color: var(--accent-2); }
+    .chip.general:hover,
+    .chip.opportunity:hover,
+    .chip.estimate:hover { background: #fffaf2; }
     .auto-build-toggle {
       min-height: 24px;
       display: inline-flex;
@@ -459,6 +475,7 @@
       align-items: center;
       margin-left: auto;
     }
+    /* Build report — ghost outline; it usually runs automatically */
     .report-chip {
       min-height: 30px;
       padding: 0 14px;
@@ -466,25 +483,27 @@
       font-size: 12px;
       font-weight: 700;
       border-radius: 6px;
-      border: none;
-      background: #264f7a;
-      color: #fff;
+      border: 1px solid var(--line);
+      background: #fff;
+      color: var(--muted);
       cursor: pointer;
       letter-spacing: 0.01em;
+      transition: background 0.15s, color 0.15s, border-color 0.15s;
     }
-    .report-chip:hover { background: #1d3d60; }
+    .report-chip:hover { background: var(--wash); color: var(--ink); border-color: #b0bfb5; }
     .report-chip:disabled { opacity: 0.5; cursor: wait; }
-    .agent-plan-chip {
-      background: #8b5a16;
-    }
-    .agent-plan-chip:hover { background: #70470f; }
+    /* Agent plan and Client report are peer AI output actions — both teal */
+    .agent-plan-chip,
     .client-report-chip {
       background: var(--accent);
+      color: #fff;
+      border-color: var(--accent);
       font-size: 13px;
       min-height: 32px;
       padding: 0 16px;
     }
-    .client-report-chip:hover { background: #085c4a; }
+    .agent-plan-chip:hover,
+    .client-report-chip:hover { background: #085c4a; border-color: #085c4a; }
 
     .agent-plan {
       background: #fff;

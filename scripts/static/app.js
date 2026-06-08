@@ -501,6 +501,11 @@
         aiKeyToggle.classList.add("on");
         aiKeyToggle.textContent = "AI key ✓";
         aiPanel.textContent = data.message || "OpenAI connection is ready.";
+        // Auto-collapse the key bar — the header "AI key ✓" carries the status
+        setTimeout(() => {
+          keyBar.hidden = true;
+          aiKeyToggle.classList.remove("on");
+        }, 1500);
       } catch (err) {
         activeApiKey = "";
         keyBar.classList.remove("ready");
