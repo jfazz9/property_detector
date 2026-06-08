@@ -23,11 +23,17 @@ def test_safe_filename_part():
     assert safe_filename_part("Arabian Ranches 2 / Casa", "anywhere") == "arabian_ranches_2_casa"
 
 
-def test_searchable_active_row_keeps_stale_false_without_status():
-    assert searchable_active_row({"is_active": False, "active_check_status": ""})
-    assert searchable_active_row({"is_active": False, "active_check_status": pd.NA})
-    assert searchable_active_row({"is_active": False})
-    assert not searchable_active_row({"is_active": False, "active_check_status": "removed"})
+def test_searchable_active_row_uses_is_active_as_source_of_truth():
+    assert searchable_active_row({"is_active": True, "active_check_status": "inactive_not_found_text"})
+    assert searchable_active_row({"is_active": "TRUE", "active_check_status": "removed"})
+    assert not searchable_active_row({"is_active": False, "active_check_status": ""})
+    assert not searchable_active_row({"is_active": "FALSE", "active_check_status": pd.NA})
+
+
+def test_searchable_active_row_uses_status_only_when_is_active_missing():
+    assert searchable_active_row({"active_check_status": ""})
+    assert searchable_active_row({"active_check_status": pd.NA})
+    assert not searchable_active_row({"active_check_status": "inactive_not_found_text"})
 
 
 def test_match_enquiry_ranks_casa_dog_friendly_options():

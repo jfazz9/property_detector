@@ -429,21 +429,13 @@ def has_inactive_status(value):
 
 
 def searchable_active_row(row):
+    if "is_active" in row:
+        return is_active_value(row.get("is_active"))
+
     if "active_check_status" in row and has_inactive_status(row.get("active_check_status")):
         return False
 
-    if "is_active" not in row:
-        return True
-
-    if is_active_value(row.get("is_active")):
-        return True
-
-    status = row.get("active_check_status")
-
-    if status is None or pd.isna(status):
-        return True
-
-    return not str(status).strip()
+    return True
 
 
 def text_contains(value, needle):

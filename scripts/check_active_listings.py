@@ -1,5 +1,6 @@
 import argparse
 import re
+import shutil
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -126,11 +127,11 @@ def wait_for_rendered_state(driver, seconds=12):
         body_text = snapshot.get("text") or ""
         text = f"{body_text}\n{snapshot.get('html') or ''}"
 
-        if looks_inactive_from_text(text) or snapshot.get("hasGoneCard"):
-            return "inactive", snapshot
-
         if snapshot.get("hasPrice") and (snapshot.get("hasAttributes") or snapshot.get("hasRegulatory")):
             return "active", snapshot
+
+        if snapshot.get("hasGoneCard"):
+            return "inactive", snapshot
 
         if looks_like_human_verification(body_text):
             return "human_verification", snapshot
@@ -237,7 +238,7 @@ def browser_check_url(driver, url, human_verification_wait=0, render_wait=12, de
     if state == "human_verification" or looks_like_human_verification(text):
         return ActiveCheckResult(True, "unknown_human_verification", "human verification or bot challenge page")
 
-    if state == "inactive" or looks_inactive_from_text(text):
+    if state == "inactive":
         return ActiveCheckResult(False, "inactive_not_found_text", "rendered page says listing is unavailable")
 
     if looks_like_search_page(final_url):
@@ -311,6 +312,20 @@ def run_active_checks(master_df, checker=check_url, limit=None, delay=0.0, check
     return master_df, pd.DataFrame(results)
 
 
+def inactive_result_ratio(results_df):
+    if results_df.empty:
+        return 0.0
+
+    return float((~results_df["is_active"].astype(bool)).mean())
+
+
+def bulk_update_is_suspicious(results_df, max_inactive_ratio=0.35, minimum_checked=10):
+    if len(results_df) < minimum_checked:
+        return False
+
+    return inactive_result_ratio(results_df) > max_inactive_ratio
+
+
 def should_confirm_with_browser(result):
     """Return True when the lightweight request is too risky to trust alone."""
     if result.status.startswith("unknown_"):
@@ -362,8 +377,29 @@ def main():
     parser.add_argument("--verification-wait", type=int, default=0, help="Seconds to wait for manual Human Verification during browser fallback.")
     parser.add_argument("--render-wait", type=int, default=12, help="Seconds to wait for rendered listing/gone markers during browser fallback.")
     parser.add_argument("--debug-dir", help="Directory to save rendered browser body/source snapshots for unclear pages.")
-    parser.add_argument("--dry-run", action="store_true", help="Check URLs and print a summary without writing the master file.")
+    parser.add_argument("--dry-run", action="store_true", help="Deprecated alias for preview mode. Preview is now the default.")
+    parser.add_argument("--write", action="store_true", help="Write confirmed results to the master file. Without this flag the run is preview-only.")
+    parser.add_argument(
+        "--max-inactive-ratio",
+        type=float,
+        default=0.35,
+        help="Refuse a write when more than this share of checked rows would become inactive (default: 0.35).",
+    )
+    parser.add_argument(
+        "--force-write",
+        action="store_true",
+        help="Override the bulk-deactivation circuit breaker. Use only after manually verifying the results.",
+    )
     args = parser.parse_args()
+
+    if args.write and not args.deep_unclear:
+        parser.error(
+            "Writing active status requires --deep-unclear browser confirmation. "
+            "Run without --write for a preview-only lightweight check."
+        )
+
+    if not 0 <= args.max_inactive_ratio <= 1:
+        parser.error("--max-inactive-ratio must be between 0 and 1.")
 
     purpose = normalize_purpose(args.purpose) if args.purpose else prompt_for_purpose()
     input_file = Path(args.input) if args.input else master_file(purpose)
@@ -404,13 +440,27 @@ def main():
         print()
         print(results_df[["is_active", "active_check_status", "url"]].head(20).to_string(index=False, max_colwidth=100))
 
-    if args.dry_run:
+    if not args.write or args.dry_run:
         print()
-        print("Dry run: master file was not updated.")
+        print("Preview only: master file was not updated. Add --write to save confirmed results.")
         return
 
+    inactive_ratio = inactive_result_ratio(results_df)
+
+    if bulk_update_is_suspicious(results_df, args.max_inactive_ratio) and not args.force_write:
+        raise RuntimeError(
+            f"Refusing to update master: {inactive_ratio:.0%} of {len(results_df)} checked rows "
+            f"would become inactive, above the {args.max_inactive_ratio:.0%} safety limit. "
+            "Review the preview or use --force-write only after manual verification."
+        )
+
+    backup_file = output_file.with_name(
+        f"{output_file.stem}_before_active_check_{pd.Timestamp.now().strftime('%Y-%m-%d_%H-%M-%S')}{output_file.suffix}"
+    )
+    shutil.copy2(input_file, backup_file)
     updated_df.to_csv(output_file, index=False)
     print()
+    print(f"Backup file: {backup_file}")
     print(f"Updated master file: {output_file}")
 
 

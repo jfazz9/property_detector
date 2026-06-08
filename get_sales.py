@@ -87,6 +87,7 @@ def command_for_step(step, purpose, args):
             "scripts/check_active_listings.py",
             "--purpose",
             purpose,
+            "--deep-unclear",
             "--delay",
             str(args.active_delay),
             "--timeout",
@@ -98,6 +99,8 @@ def command_for_step(step, purpose, args):
 
         if args.active_dry_run:
             command.append("--dry-run")
+        else:
+            command.append("--write")
 
         return command
 
@@ -119,7 +122,7 @@ def selected_steps(args):
     if not args.skip_predict:
         steps.append("predict")
 
-    if not args.skip_active_check:
+    if args.run_active_check and not args.skip_active_check and not args.quick_new:
         steps.append("active")
 
     return steps
@@ -166,6 +169,11 @@ def parse_args():
     parser.add_argument("--active-delay", type=float, default=0.5, help="Delay between active-check requests.")
     parser.add_argument("--active-timeout", type=int, default=15, help="Active-check request timeout.")
     parser.add_argument("--active-dry-run", action="store_true", help="Run active check without writing the master file.")
+    parser.add_argument(
+        "--run-active-check",
+        action="store_true",
+        help="Run the active listing checker after refresh. Disabled by default because it changes master visibility.",
+    )
     parser.add_argument("--skip-collect", action="store_true", help="Skip URL collection.")
     parser.add_argument("--skip-scrape", action="store_true", help="Skip page scraping.")
     parser.add_argument("--skip-process", action="store_true", help="Skip raw page processing.")

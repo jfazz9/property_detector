@@ -2,7 +2,9 @@ import pandas as pd
 
 from scripts.check_active_listings import (
     ActiveCheckResult,
+    bulk_update_is_suspicious,
     classify_response,
+    inactive_result_ratio,
     run_active_checks,
     should_confirm_with_browser,
     wait_for_rendered_state,
@@ -104,12 +106,38 @@ def test_wait_for_rendered_state_detects_gone_card():
     assert state == "inactive"
 
 
+def test_wait_for_rendered_state_treats_unavailable_text_without_gone_card_as_unknown():
+    driver = FakeDriver([{
+        "text": "Sorry, this Villa for sale in Lila, Arabian Ranches 2 is no longer available",
+        "html": "",
+        "hasGoneCard": False,
+    }])
+
+    state, _ = wait_for_rendered_state(driver, seconds=0)
+
+    assert state == "unknown"
+
+
 def test_wait_for_rendered_state_detects_real_listing_markers():
     driver = FakeDriver([{
         "text": "AED 6,800,000",
         "html": "",
         "hasPrice": True,
         "hasAttributes": True,
+    }])
+
+    state, _ = wait_for_rendered_state(driver, seconds=0)
+
+    assert state == "active"
+
+
+def test_wait_for_rendered_state_active_markers_override_stale_unavailable_text():
+    driver = FakeDriver([{
+        "text": "AED 6,800,000\nSorry, this Villa for sale is no longer available",
+        "html": "",
+        "hasPrice": True,
+        "hasAttributes": True,
+        "hasGoneCard": False,
     }])
 
     state, _ = wait_for_rendered_state(driver, seconds=0)
@@ -159,3 +187,17 @@ def test_run_active_checks_only_checks_currently_active_rows():
     assert updated_df.loc[0, "is_active"] == False
     assert updated_df.loc[0, "active_checked_at"] == "2026-05-14 10:00:00"
     assert updated_df.loc[1, "is_active"] == False
+
+
+def test_bulk_update_circuit_breaker_blocks_mass_deactivation():
+    results_df = pd.DataFrame({"is_active": [False] * 8 + [True] * 2})
+
+    assert inactive_result_ratio(results_df) == 0.8
+    assert bulk_update_is_suspicious(results_df, max_inactive_ratio=0.35)
+
+
+def test_bulk_update_circuit_breaker_allows_small_verified_batch():
+    results_df = pd.DataFrame({"is_active": [False] * 2 + [True] * 8})
+
+    assert inactive_result_ratio(results_df) == 0.2
+    assert not bulk_update_is_suspicious(results_df, max_inactive_ratio=0.35)
