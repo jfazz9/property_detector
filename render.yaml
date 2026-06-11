@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: property-detector
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: python scripts/webapp.py
+    healthCheckPath: /health
+    envVars:
+      - key: PUBLIC_MODE
+        value: "true"
+      - key: PROPERTY_DATABASE_PATH
+        value: data/property_detector.db
+      - key: AI_RATE_LIMIT_REQUESTS
+        value: "8"
+      - key: AI_RATE_LIMIT_WINDOW_SECONDS
+        value: "14400"
+      - key: OPENAI_API_KEY
+        sync: false

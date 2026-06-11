@@ -70,6 +70,29 @@ python scripts/webapp.py
 
 Works for both `--purpose sale` and `--purpose rent`.
 
+## Public Deployment
+
+The public app reads from `data/property_detector.db`. Refresh that file after
+scraping and processing new data:
+
+```powershell
+.\.venv\Scripts\python.exe scripts\build_property_database.py
+```
+
+The included `render.yaml` configures a Render web service with:
+
+- `PUBLIC_MODE=true`
+- server-managed OpenAI access through `OPENAI_API_KEY`
+- Owner Lookup and Opportunity Scan disabled
+- per-IP AI rate limiting
+- `/health` deployment checks
+- SQLite opened read-only by the web app
+
+Before deploying, add the database and deployment files to Git, push the
+repository, create a Render Blueprint from `render.yaml`, and enter
+`OPENAI_API_KEY` as a secret environment variable in Render. Never commit the
+key to the repository.
+
 ---
 
 ## Project Structure

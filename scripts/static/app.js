@@ -1,3 +1,4 @@
+    const appConfig = window.APP_CONFIG || {};
     const promptBox   = document.querySelector("#prompt");
     const intent      = document.querySelector("#intent");
     const purpose     = document.querySelector("#purpose");
@@ -60,7 +61,7 @@
     const fallbackSection    = document.querySelector("#fallback-section");
     const fallbackResults    = document.querySelector("#fallback-results");
     const status      = document.querySelector("#status");
-    let activeApiKey  = "";
+    let activeApiKey  = appConfig.serverManagedAi ? "server-managed" : "";
     let lastRankContext = null;
     let lastReportContext = null;
     let lastBuiltReport = null;
@@ -68,6 +69,24 @@
     let lastFindCandidateUrls = [];
     let lastFindPremiumCandidateUrls = [];
     let activeScenario = "";
+
+    if (appConfig.publicMode) {
+      document.body.classList.add("public-mode");
+      aiKeyToggle.hidden = true;
+      keyBar.hidden = true;
+      ownerToggle.hidden = true;
+      ownerDrawer.hidden = true;
+      drawerOverlay.hidden = true;
+      oppScanSaleBtn.hidden = true;
+      oppScanRentBtn.hidden = true;
+      document.querySelector('[data-scenario="listing_opportunity"]')?.setAttribute("hidden", "");
+      const listingOpportunityOption = intent.querySelector('option[value="listing_opportunity"]');
+      if (listingOpportunityOption) {
+        listingOpportunityOption.hidden = true;
+        listingOpportunityOption.disabled = true;
+      }
+      status.textContent = "Public demo";
+    }
 
     const wfSteps = [1, 2, 3].map(n => document.querySelector(`#wf-${n}`));
     const wf4a = document.querySelector("#wf-4a");  // Agent Plan pill
@@ -126,6 +145,7 @@
     });
 
     function ensureApiKeyVisible() {
+      if (appConfig.serverManagedAi) return;
       if (!activeApiKey) {
         keyBar.hidden = false;
         aiKeyToggle.classList.add("on");

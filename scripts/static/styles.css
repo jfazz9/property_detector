@@ -1099,3 +1099,6 @@
       .comm-panel { min-width: 260px; }
     }
   
+.public-mode .owner-inline-lookup {
+  display: none !important;
+}

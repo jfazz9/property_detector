@@ -1,25 +1,53 @@
+import os
+import sqlite3
 from pathlib import Path
 
 import pandas as pd
 
 from enquiry_matcher import clean_number
-from workflow_paths import master_file
+from workflow_paths import normalize_purpose
 
-from .constants import (
-    MARKET_SALES_FILE,
-    MARKET_SALES_PREDICTED_FILE,
-    MARKET_RENTALS_FILE,
-    MARKET_RENTALS_PREDICTED_FILE,
-)
+from .constants import MARKET_RENTALS_FILE, MARKET_SALES_FILE
+
+
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+DEFAULT_DATABASE_PATH = PROJECT_ROOT / "data" / "property_detector.db"
+LISTING_TABLES = {
+    "sale": "sale_listings",
+    "rent": "rental_listings",
+}
+
+
+def database_path():
+    configured_path = os.getenv("PROPERTY_DATABASE_PATH")
+    return Path(configured_path).expanduser() if configured_path else DEFAULT_DATABASE_PATH
+
+
+def read_database_table(table_name):
+    path = database_path()
+
+    if not path.exists():
+        raise FileNotFoundError(
+            f"Missing property database: {path}. "
+            "Run scripts/build_property_database.py first."
+        )
+
+    connection_uri = f"{path.resolve().as_uri()}?mode=ro"
+
+    try:
+        with sqlite3.connect(connection_uri, uri=True) as connection:
+            return pd.read_sql_query(f'SELECT * FROM "{table_name}"', connection)
+    except (sqlite3.DatabaseError, pd.errors.DatabaseError) as exc:
+        raise RuntimeError(
+            f"Could not read table '{table_name}' from property database: {path}"
+        ) from exc
 
 
 def read_master(purpose):
-    path = master_file(purpose)
-
-    if not path.exists():
-        raise FileNotFoundError(f"Missing master file: {path}")
-
-    return pd.read_csv(path), path
+    normalized_purpose = normalize_purpose(purpose)
+    table_name = LISTING_TABLES[normalized_purpose]
+    path = database_path()
+    return read_database_table(table_name), f"{path}#{table_name}"
 
 
 def clean_market_number(value):
@@ -28,20 +56,15 @@ def clean_market_number(value):
 
 
 def load_market_sales(path=MARKET_SALES_FILE):
-    # Prefer the type-predicted file when loading the default market file — it has
-    # the same columns plus predicted_type/prediction_confidence added by
-    # predict_market_villa_type.py. When a custom path is supplied (e.g. in tests),
-    # use it as-is.
     if str(path) == MARKET_SALES_FILE:
-        predicted_path = Path(MARKET_SALES_PREDICTED_FILE)
-        market_path = predicted_path if predicted_path.exists() else Path(path)
+        df = read_database_table("market_sales")
     else:
         market_path = Path(path)
 
-    if not market_path.exists():
-        return pd.DataFrame()
+        if not market_path.exists():
+            return pd.DataFrame()
 
-    df = pd.read_csv(market_path)
+        df = pd.read_csv(market_path)
 
     for column in ["price", "price_per_sqft", "size_sqft", "beds", "prediction_confidence"]:
         if column in df.columns:
@@ -54,18 +77,15 @@ def load_market_sales(path=MARKET_SALES_FILE):
 
 
 def load_market_rentals(path=MARKET_RENTALS_FILE):
-    # Prefer the type-predicted file when loading the default rental market file.
-    # When a custom path is supplied (e.g. in tests), use it as-is.
     if str(path) == MARKET_RENTALS_FILE:
-        predicted_path = Path(MARKET_RENTALS_PREDICTED_FILE)
-        market_path = predicted_path if predicted_path.exists() else Path(path)
+        df = read_database_table("market_rentals")
     else:
         market_path = Path(path)
 
-    if not market_path.exists():
-        return pd.DataFrame()
+        if not market_path.exists():
+            return pd.DataFrame()
 
-    df = pd.read_csv(market_path)
+        df = pd.read_csv(market_path)
 
     numeric_columns = [
         "Bedrooms",

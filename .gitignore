@@ -29,3 +29,5 @@ data/ar2_floorplan_reference_candidates_*.csv
 # Temporary/debug files
 *.tmp
 *.bak
+*.db-shm
+*.db-wal
