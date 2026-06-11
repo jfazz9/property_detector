@@ -1,5 +1,6 @@
 import json
 import os
+import re
 import sys
 import threading
 import time
@@ -72,7 +73,6 @@ AI_PATHS = {
 }
 PUBLIC_DISABLED_PATHS = {
     "/api/owner-lookup",
-    "/api/opportunity-scan",
 }
 
 HTML = Path(__file__).parent.joinpath("webapp_template.html").read_text(encoding="utf-8")
@@ -116,7 +116,7 @@ def app_config():
         "publicMode": PUBLIC_MODE,
         "serverManagedAi": PUBLIC_MODE,
         "ownerLookupEnabled": not PUBLIC_MODE,
-        "opportunityScanEnabled": not PUBLIC_MODE,
+        "opportunityScanEnabled": True,
     }
 
 
@@ -139,6 +139,26 @@ def validate_payload(payload):
         raise ValueError(
             f"Prompt is too long. Maximum length is {MAX_PROMPT_LENGTH} characters."
         )
+
+
+def page_template():
+    if not PUBLIC_MODE:
+        return HTML
+
+    page = re.sub(
+        r'\s*<button class="ghost" id="ai-key-toggle"[^>]*>.*?</button>',
+        "",
+        HTML,
+        count=1,
+        flags=re.DOTALL,
+    )
+    return re.sub(
+        r'\s*<!-- AI key bar.*?<div class="key-bar" id="key-bar".*?</div>',
+        "",
+        page,
+        count=1,
+        flags=re.DOTALL,
+    )
 
 
 def page_for_result(
@@ -282,7 +302,22 @@ def page_for_result(
         error_hidden = ""
 
     return (
-        HTML
+        page_template()
+        .replace(
+            "__AI_KEY_TOGGLE__",
+            "" if PUBLIC_MODE else '<button class="ghost" id="ai-key-toggle" type="button">AI key</button>',
+        )
+        .replace(
+            "__AI_KEY_BAR__",
+            "" if PUBLIC_MODE else (
+                '<div class="key-bar" id="key-bar" hidden>'
+                '<input id="openai-token" type="password" autocomplete="off" '
+                'placeholder="OpenAI API key - session only, not saved">'
+                '<button class="ghost" id="check-openai" type="button" '
+                'style="white-space:nowrap">Check key</button>'
+                '</div>'
+            ),
+        )
         .replace("__PROMPT__", escape(prompt))
         .replace("__INTENT_AUTO_SELECTED__", intent_selected["auto"])
         .replace("__INTENT_BEST_VALUE_SELECTED__", intent_selected["best_value"])

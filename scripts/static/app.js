@@ -72,19 +72,9 @@
 
     if (appConfig.publicMode) {
       document.body.classList.add("public-mode");
-      aiKeyToggle.hidden = true;
-      keyBar.hidden = true;
       ownerToggle.hidden = true;
       ownerDrawer.hidden = true;
       drawerOverlay.hidden = true;
-      oppScanSaleBtn.hidden = true;
-      oppScanRentBtn.hidden = true;
-      document.querySelector('[data-scenario="listing_opportunity"]')?.setAttribute("hidden", "");
-      const listingOpportunityOption = intent.querySelector('option[value="listing_opportunity"]');
-      if (listingOpportunityOption) {
-        listingOpportunityOption.hidden = true;
-        listingOpportunityOption.disabled = true;
-      }
       status.textContent = "Public demo";
     }
 
@@ -138,7 +128,7 @@
     });
 
     // AI key toggle
-    aiKeyToggle.addEventListener("click", () => {
+    aiKeyToggle?.addEventListener("click", () => {
       keyBar.hidden = !keyBar.hidden;
       aiKeyToggle.classList.toggle("on", !keyBar.hidden);
       if (!keyBar.hidden) tokenBox.focus();
@@ -151,6 +141,10 @@
         aiKeyToggle.classList.add("on");
         tokenBox.focus();
       }
+    }
+
+    function currentApiToken() {
+      return activeApiKey || tokenBox?.value.trim() || "";
     }
 
     // Communities popover
@@ -509,6 +503,7 @@
     }
 
     async function checkOpenAiKey() {
+      if (!tokenBox || !checkButton) return;
       const token = tokenBox.value.trim();
       if (!token) { error.hidden = false; error.textContent = "Add an OpenAI API key first."; tokenBox.focus(); return; }
       checkButton.disabled = true;
@@ -903,7 +898,7 @@
 
     async function runAgentPlan() {
       const text = promptBox.value.trim();
-      const token = activeApiKey || tokenBox.value.trim();
+      const token = currentApiToken();
       if (!text) { promptBox.focus(); return; }
       if (!token) { error.hidden = false; error.textContent = "Add and check an OpenAI API key first (AI key button above)."; return; }
       const built = lastBuiltReport;
@@ -1161,7 +1156,7 @@
 
     async function runClientReport() {
       const text = promptBox.value.trim();
-      const token = activeApiKey || tokenBox.value.trim();
+      const token = currentApiToken();
       if (!text) { promptBox.focus(); return; }
       if (!token) { error.hidden = false; error.textContent = "Add and check an OpenAI API key first (AI key button above)."; return; }
       const built = lastBuiltReport;
@@ -1206,7 +1201,7 @@
 
     async function runAiReport({ buttonElement, buttonText, endpoint, progressStart, scenario, rankedUrls, candidateUrls, premiumCandidateUrls }) {
       const text = promptBox.value.trim();
-      const token = activeApiKey || tokenBox.value.trim();
+      const token = currentApiToken();
       if (!text) { promptBox.focus(); return; }
       if (!token) { error.hidden = false; error.textContent = "Add and check an OpenAI API key first (AI key button above)."; return; }
       if (buttonElement) { buttonElement.disabled = true; buttonElement.textContent = "Thinking…"; }
@@ -1254,7 +1249,7 @@
 
     async function runEstimate() {
       const text = promptBox.value.trim();
-      const token = activeApiKey || tokenBox.value.trim();
+      const token = currentApiToken();
       if (!text) { promptBox.focus(); return; }
       if (!token) { error.hidden = false; error.textContent = "Add and check an OpenAI API key first (AI key button above)."; return; }
       estimateButton.disabled = true;
@@ -1355,7 +1350,7 @@
     }
 
     async function runOpportunityScan(scanPurpose = "sale", buttonEl = oppScanSaleBtn) {
-      const token = activeApiKey || tokenBox.value.trim();
+      const token = currentApiToken();
       if (!token) { error.hidden = false; error.textContent = "Add and check an OpenAI API key first (AI key button above)."; return; }
       buttonEl.disabled = true;
       buttonEl.textContent = "Scanning…";
@@ -1481,7 +1476,7 @@
     quickButton.addEventListener("click", runQuickQuery);
     clearButton.addEventListener("click", clearPage);
     printReportButton.addEventListener("click", () => window.print());
-    checkButton.addEventListener("click", checkOpenAiKey);
+    checkButton?.addEventListener("click", checkOpenAiKey);
     ownerButton.addEventListener("click", lookupOwner);
     ownerUrlBox.addEventListener("keydown", (e) => { if (e.key === "Enter") lookupOwner(); });
     results.addEventListener("click", handleListingActionClick);

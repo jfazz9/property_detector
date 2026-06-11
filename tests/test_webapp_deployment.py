@@ -37,12 +37,25 @@ def test_validate_payload_rejects_oversized_prompt(monkeypatch):
         webapp.validate_payload({"prompt": "x" * 11})
 
 
-def test_public_app_config_disables_internal_tools(monkeypatch):
+def test_public_app_config_keeps_opportunity_scan_and_disables_owner_lookup(monkeypatch):
     monkeypatch.setattr(webapp, "PUBLIC_MODE", True)
 
     assert webapp.app_config() == {
         "publicMode": True,
         "serverManagedAi": True,
         "ownerLookupEnabled": False,
-        "opportunityScanEnabled": False,
+        "opportunityScanEnabled": True,
     }
+
+
+def test_public_page_omits_api_key_controls(monkeypatch):
+    monkeypatch.setattr(webapp, "PUBLIC_MODE", True)
+
+    page = webapp.page_for_result()
+
+    assert 'id="ai-key-toggle"' not in page
+    assert 'id="openai-token"' not in page
+    assert 'id="check-openai"' not in page
+    assert 'id="opp-scan-sale"' in page
+    assert 'id="opp-scan-rent"' in page
+    assert "/api/opportunity-scan" not in webapp.PUBLIC_DISABLED_PATHS
