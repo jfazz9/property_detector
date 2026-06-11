@@ -913,6 +913,156 @@ def test_ai_scenario_prompt_applies_scenario_focus(monkeypatch):
     assert result["matches"][0]["url"] == "https://example.com/value"
 
 
+def test_ai_scenario_prompt_only_ranks_initial_find_candidates(monkeypatch):
+    master_df = pd.DataFrame([
+        {
+            "listing_purpose": "sale",
+            "is_active": True,
+            "url": "https://example.com/from-find",
+            "title": "Sale in Casa: Initial find result",
+            "price": 5500000,
+            "bedrooms": 3,
+            "predicted_community": "Casa",
+            "description": "Villa in Arabian Ranches 2.",
+        },
+        {
+            "listing_purpose": "sale",
+            "is_active": True,
+            "url": "https://example.com/master-only",
+            "title": "Sale in Casa: Hidden master result",
+            "price": 5400000,
+            "bedrooms": 3,
+            "predicted_community": "Casa",
+            "description": "Villa in Arabian Ranches 2.",
+        },
+    ])
+
+    monkeypatch.setattr("webapp_backend.read_master", lambda purpose: (master_df, "memory.csv"))
+
+    def fake_ranker(matches_df, enquiry, **kwargs):
+        assert matches_df["url"].tolist() == ["https://example.com/from-find"]
+        return {
+            "market_read": "Candidate boundary applied.",
+            "client_response": "Only the initial shortlist was ranked.",
+            "ranked_matches": [
+                {
+                    "url": "https://example.com/from-find",
+                    "ai_rank": 1,
+                    "ai_score": 90,
+                    "fit_summary": "Initial result.",
+                    "opportunity_angle": "Review it.",
+                    "strengths": ["shortlisted"],
+                    "concerns": ["verify"],
+                    "verify": ["confirm"],
+                }
+            ],
+        }
+
+    monkeypatch.setattr("webapp_backend.rank_matches_with_ai", fake_ranker)
+
+    result = ai_scenario_prompt(
+        "3 bed villa in ar2 5.5m best value",
+        "best_value",
+        selected_purpose="sale",
+        api_key="test-key",
+        candidate_urls=["https://example.com/from-find"],
+    )
+
+    assert [match["url"] for match in result["matches"]] == ["https://example.com/from-find"]
+    assert result["rows_searched"] == 1
+
+
+def test_ai_scenario_prompt_includes_find_premium_compromises(monkeypatch):
+    master_df = pd.DataFrame([
+        {
+            "listing_purpose": "rent",
+            "is_active": True,
+            "url": "https://example.com/exact-five-bed",
+            "title": "Rent in Lila: Exact five bedroom villa",
+            "annual_rent": 350000,
+            "bedrooms": 5,
+            "bathrooms": 5,
+            "predicted_community": "Lila",
+            "property_size_sqft": 4650,
+            "description": "Vacant five bedroom family villa with garden.",
+        },
+        {
+            "listing_purpose": "rent",
+            "is_active": True,
+            "url": "https://example.com/premium-four-bed",
+            "title": "Rent in Rosa: Premium move-in-ready villa",
+            "annual_rent": 440000,
+            "bedrooms": 4,
+            "bathrooms": 5,
+            "predicted_community": "Rosa",
+            "property_size_sqft": 7775,
+            "description": "Vacant modern villa with private garden near the pool.",
+        },
+        {
+            "listing_purpose": "rent",
+            "is_active": True,
+            "url": "https://example.com/master-only-four-bed",
+            "title": "Rent in Rosa: Hidden master villa",
+            "annual_rent": 430000,
+            "bedrooms": 4,
+            "bathrooms": 5,
+            "predicted_community": "Rosa",
+            "property_size_sqft": 7000,
+            "description": "Vacant modern villa with garden.",
+        },
+    ])
+
+    monkeypatch.setattr("webapp_backend.read_master", lambda purpose: (master_df, "memory.csv"))
+
+    def fake_ranker(matches_df, enquiry, **kwargs):
+        assert matches_df["url"].tolist() == [
+            "https://example.com/exact-five-bed",
+            "https://example.com/premium-four-bed",
+        ]
+        premium_reason = matches_df.loc[
+            matches_df["url"].eq("https://example.com/premium-four-bed"),
+            "match_reasons",
+        ].iloc[0]
+        assert premium_reason.startswith("premium compromise;")
+        assert "Exact-bedroom options are primary" in enquiry["analysis_focus"]
+        return {
+            "market_read": "Both Find groups were considered.",
+            "client_response": "The premium compromise remains secondary.",
+            "ranked_matches": [
+                {
+                    "url": url,
+                    "ai_rank": rank,
+                    "ai_score": 90 - rank,
+                    "fit_summary": "Find candidate.",
+                    "opportunity_angle": "Review it.",
+                    "strengths": ["shortlisted"],
+                    "concerns": ["bedroom trade-off"] if rank == 2 else [],
+                    "verify": ["confirm"],
+                }
+                for rank, url in enumerate(matches_df["url"].tolist(), start=1)
+            ],
+        }
+
+    monkeypatch.setattr("webapp_backend.rank_matches_with_ai", fake_ranker)
+
+    result = ai_scenario_prompt(
+        "5 bed villa ready to move budget 460k",
+        "move_in_ready",
+        selected_purpose="rent",
+        api_key="test-key",
+        candidate_urls=[
+            "https://example.com/exact-five-bed",
+            "https://example.com/premium-four-bed",
+        ],
+        premium_candidate_urls=["https://example.com/premium-four-bed"],
+    )
+
+    assert [match["url"] for match in result["matches"]] == [
+        "https://example.com/exact-five-bed",
+        "https://example.com/premium-four-bed",
+    ]
+
+
 def test_ai_scenario_prompt_supports_upgrade_and_move_in_ready(monkeypatch):
     master_df = pd.DataFrame([
         {

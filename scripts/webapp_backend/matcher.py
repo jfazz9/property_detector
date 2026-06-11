@@ -241,8 +241,11 @@ def quick_listing_query(
     return result
 
 
-def build_matches_dataframe(enquiry, limit=DEFAULT_RESULT_LIMIT):
+def build_matches_dataframe(enquiry, limit=DEFAULT_RESULT_LIMIT, candidate_urls=None):
     master_df, path = _read_master(enquiry["purpose"])
+    if candidate_urls:
+        allowed_urls = {str(url).strip() for url in candidate_urls if str(url).strip()}
+        master_df = master_df[master_df["url"].fillna("").astype(str).isin(allowed_urls)].copy()
     search_df = filter_master_by_listing_scope(master_df, enquiry)
     bedroom_options = enquiry.get("bedrooms_options") or [None]
     frames = []

@@ -23,6 +23,7 @@ from .matcher import (
     build_budget_reality_primary_dataframe,
     build_matches_dataframe,
     build_over_budget_dataframe,
+    build_premium_compromise_dataframe,
 )
 from .prompt_parser import parse_prompt
 from .result_builder import result_payload
@@ -277,6 +278,7 @@ def ai_fallback_prompt(
     limit=DEFAULT_AI_RESULT_LIMIT,
     skip_final_report=False,
     ranked_urls=None,
+    candidate_urls=None,
     listing_scope="auto",
     listing_communities=None,
     market_scope="auto",
@@ -287,6 +289,9 @@ def ai_fallback_prompt(
 
     enquiry = parse_prompt(text, selected_purpose, "auto", market_scope, market_communities, listing_scope, listing_communities)
     master_df, path = _read_master(enquiry["purpose"])
+    if candidate_urls:
+        allowed_urls = {str(url).strip() for url in candidate_urls if str(url).strip()}
+        master_df = master_df[master_df["url"].fillna("").astype(str).isin(allowed_urls)].copy()
     fallback_df = build_budget_fallback_dataframe(enquiry, master_df, limit=max(limit, DEFAULT_AI_SHORTLIST_LIMIT))
 
     if fallback_df.empty:
@@ -356,13 +361,15 @@ def ai_fallback_prompt(
     return result
 
 
-def ai_scenario_prompt(text, scenario, selected_purpose="auto", api_key=None, limit=DEFAULT_AI_RESULT_LIMIT, listing_scope="auto", listing_communities=None, market_scope="auto", market_communities=None):
+def ai_scenario_prompt(text, scenario, selected_purpose="auto", api_key=None, limit=DEFAULT_AI_RESULT_LIMIT, candidate_urls=None, premium_candidate_urls=None, listing_scope="auto", listing_communities=None, market_scope="auto", market_communities=None):
     return ai_scenario_result(
         text,
         scenario,
         selected_purpose=selected_purpose,
         api_key=api_key,
         limit=limit,
+        candidate_urls=candidate_urls,
+        premium_candidate_urls=premium_candidate_urls,
         listing_scope=listing_scope,
         listing_communities=listing_communities,
         market_scope=market_scope,
@@ -371,13 +378,15 @@ def ai_scenario_prompt(text, scenario, selected_purpose="auto", api_key=None, li
     )
 
 
-def ai_scenario_rank_prompt(text, scenario, selected_purpose="auto", api_key=None, limit=DEFAULT_AI_RESULT_LIMIT, listing_scope="auto", listing_communities=None, market_scope="auto", market_communities=None):
+def ai_scenario_rank_prompt(text, scenario, selected_purpose="auto", api_key=None, limit=DEFAULT_AI_RESULT_LIMIT, candidate_urls=None, premium_candidate_urls=None, listing_scope="auto", listing_communities=None, market_scope="auto", market_communities=None):
     return ai_scenario_result(
         text,
         scenario,
         selected_purpose=selected_purpose,
         api_key=api_key,
         limit=limit,
+        candidate_urls=candidate_urls,
+        premium_candidate_urls=premium_candidate_urls,
         listing_scope=listing_scope,
         listing_communities=listing_communities,
         market_scope=market_scope,
@@ -409,6 +418,8 @@ def ai_scenario_result(
     api_key=None,
     limit=DEFAULT_AI_RESULT_LIMIT,
     ranked_urls=None,
+    candidate_urls=None,
+    premium_candidate_urls=None,
     listing_scope="auto",
     listing_communities=None,
     market_scope="auto",
@@ -417,8 +428,8 @@ def ai_scenario_result(
 ):
     if scenario == "fallback":
         if skip_final_report:
-            return ai_fallback_prompt(text, selected_purpose=selected_purpose, api_key=api_key, limit=limit, skip_final_report=True, ranked_urls=ranked_urls, listing_scope=listing_scope, listing_communities=listing_communities, market_scope=market_scope, market_communities=market_communities)
-        return ai_fallback_prompt(text, selected_purpose=selected_purpose, api_key=api_key, limit=limit, ranked_urls=ranked_urls, listing_scope=listing_scope, listing_communities=listing_communities, market_scope=market_scope, market_communities=market_communities)
+            return ai_fallback_prompt(text, selected_purpose=selected_purpose, api_key=api_key, limit=limit, skip_final_report=True, ranked_urls=ranked_urls, candidate_urls=candidate_urls, listing_scope=listing_scope, listing_communities=listing_communities, market_scope=market_scope, market_communities=market_communities)
+        return ai_fallback_prompt(text, selected_purpose=selected_purpose, api_key=api_key, limit=limit, ranked_urls=ranked_urls, candidate_urls=candidate_urls, listing_scope=listing_scope, listing_communities=listing_communities, market_scope=market_scope, market_communities=market_communities)
 
     if not api_key:
         raise RuntimeError("Missing OpenAI API key.")
@@ -436,13 +447,44 @@ def ai_scenario_result(
 
     enquiry["analysis_focus"] = scenario_config["focus"]
     shortlist_limit = max(limit, DEFAULT_AI_SHORTLIST_LIMIT)
-    matches_df, master_df, path = build_matches_dataframe(dict(enquiry), shortlist_limit)
+    matches_df, master_df, path = build_matches_dataframe(
+        dict(enquiry),
+        shortlist_limit,
+        candidate_urls=candidate_urls,
+    )
 
     if scenario == "budget_reality" or enquiry.get("budget_reality_mode"):
         reality_df = build_budget_reality_primary_dataframe(enquiry, master_df, limit=shortlist_limit)
 
         if not reality_df.empty:
             matches_df = reality_df
+
+    if premium_candidate_urls and not ranked_urls:
+        premium_urls = {
+            str(url).strip()
+            for url in premium_candidate_urls
+            if str(url).strip()
+        }
+        premium_master_df = master_df[
+            master_df["url"].fillna("").astype(str).isin(premium_urls)
+        ].copy()
+        premium_df = build_premium_compromise_dataframe(
+            enquiry,
+            premium_master_df,
+            matches_df,
+            limit=len(premium_urls),
+        )
+
+        if not premium_df.empty:
+            premium_df["match_reasons"] = premium_df["match_reasons"].apply(
+                lambda reasons: f"premium compromise; {reasons}"
+            )
+            matches_df = pd.concat([matches_df, premium_df], ignore_index=True)
+            matches_df = matches_df.drop_duplicates(subset=["url"], keep="first")
+            enquiry["analysis_focus"] += (
+                " Exact-bedroom options are primary. Rows labelled premium compromise are secondary options; "
+                "include them when their quality or scenario fit justifies the bedroom trade-off, and state that trade-off clearly."
+            )
 
     if matches_df.empty:
         raise RuntimeError("No suitable rows were found for this scenario.")

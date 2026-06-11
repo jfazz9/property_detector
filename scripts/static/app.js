@@ -65,6 +65,8 @@
     let lastReportContext = null;
     let lastBuiltReport = null;
     let lastRenderedData = null;
+    let lastFindCandidateUrls = [];
+    let lastFindPremiumCandidateUrls = [];
     let activeScenario = "";
 
     const wfSteps = [1, 2, 3].map(n => document.querySelector(`#wf-${n}`));
@@ -384,6 +386,8 @@
       lastReportContext = null;
       lastBuiltReport = null;
       lastRenderedData = null;
+      lastFindCandidateUrls = [];
+      lastFindPremiumCandidateUrls = [];
       setActiveScenario("");
       setWorkflowStep(0);
       promptBox.focus();
@@ -406,6 +410,8 @@
       fallbackSection.hidden = true;
       fallbackResults.innerHTML = "";
       spinner.style.display = "block";
+      lastFindCandidateUrls = [];
+      lastFindPremiumCandidateUrls = [];
       try {
         const res = await fetch("/api/match", {
           method: "POST",
@@ -423,6 +429,15 @@
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || "Search failed");
+        lastFindCandidateUrls = [
+          ...(data.matches || []),
+          ...(data.premium_compromise_matches || []),
+          ...(data.over_budget_matches || []),
+          ...(data.fallback_matches || []),
+        ].map((item) => item.url).filter((url, index, urls) => url && urls.indexOf(url) === index);
+        lastFindPremiumCandidateUrls = (data.premium_compromise_matches || [])
+          .map((item) => item.url)
+          .filter((url, index, urls) => url && urls.indexOf(url) === index);
         render(data);
       } catch (err) {
         error.hidden = false;
@@ -581,10 +596,15 @@
       return runAiReport({ buttonElement: aiButton, buttonText: "General", endpoint: "/api/ai-feedback", progressStart: "Shortlisting your database..." });
     }
     async function runScenario(scenario, buttonElement) {
+      if (!lastFindCandidateUrls.length) {
+        error.hidden = false;
+        error.textContent = "Run Find first so the scenario can rank that shortlist.";
+        return null;
+      }
       const labels = { best_value: "Best value", budget_reality: "Budget reality", fallback: "Fallback", negotiation: "Negotiation", listing_opportunity: "Listing opp.", upgrade_potential: "Upgrade", move_in_ready: "Move-in ready" };
       const starts = { best_value: "Building value shortlist...", budget_reality: "Building budget reality case...", fallback: "Building premium fallback shortlist...", negotiation: "Building negotiation case...", listing_opportunity: "Finding listing opportunities...", upgrade_potential: "Finding upgrade potential...", move_in_ready: "Finding move-in ready options..." };
       const buttonText = labels[scenario] || "Scenario";
-      const rankedData = await runAiReport({ buttonElement, buttonText, endpoint: "/api/ai-scenario-rank", progressStart: starts[scenario] || "Building scenario report...", scenario });
+      const rankedData = await runAiReport({ buttonElement, buttonText, endpoint: "/api/ai-scenario-rank", progressStart: starts[scenario] || "Building scenario report...", scenario, candidateUrls: lastFindCandidateUrls, premiumCandidateUrls: lastFindPremiumCandidateUrls });
 
       if (rankedData && autoBuildReport?.checked && lastRankContext?.ranked_urls?.length) {
         return runBuildReport(buttonElement, buttonText);
@@ -1164,7 +1184,7 @@
       }
     }
 
-    async function runAiReport({ buttonElement, buttonText, endpoint, progressStart, scenario, rankedUrls }) {
+    async function runAiReport({ buttonElement, buttonText, endpoint, progressStart, scenario, rankedUrls, candidateUrls, premiumCandidateUrls }) {
       const text = promptBox.value.trim();
       const token = activeApiKey || tokenBox.value.trim();
       if (!text) { promptBox.focus(); return; }
@@ -1182,7 +1202,7 @@
         const res = await fetch(endpoint, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ prompt: text, purpose: purpose.value, intent: intent.value, listing_scope: listingScope.value, listing_communities: selectedListingCommunities(), market_scope: marketScope.value, market_communities: selectedMarketCommunities(), api_key: token, limit: 10, scenario, ranked_urls: rankedUrls || [] }),
+          body: JSON.stringify({ prompt: text, purpose: purpose.value, intent: intent.value, listing_scope: listingScope.value, listing_communities: selectedListingCommunities(), market_scope: marketScope.value, market_communities: selectedMarketCommunities(), api_key: token, limit: 10, scenario, ranked_urls: rankedUrls || [], candidate_urls: candidateUrls || [], premium_candidate_urls: premiumCandidateUrls || [] }),
           signal: controller.signal
         });
         const data = await res.json();
