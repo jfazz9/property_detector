@@ -93,6 +93,36 @@ repository, create a Render Blueprint from `render.yaml`, and enter
 `OPENAI_API_KEY` as a secret environment variable in Render. Never commit the
 key to the repository.
 
+### Anonymous Usage Tracking
+
+The public server records anonymous page visits and feature use without storing
+prompt text or raw IP addresses. Open the private dashboard at:
+
+```text
+https://your-render-domain/admin/usage
+```
+
+The browser will request a username and password. The username can be `admin`;
+the password is the `USAGE_ADMIN_TOKEN` secret configured in Render.
+
+Also configure `USAGE_HASH_SALT` as a separate long random secret. It is used to
+create stable anonymous visitor hashes.
+
+Each event is written to:
+
+- Render logs as a structured `USAGE_EVENT` line
+- `data/usage_events.db` for the private dashboard
+
+Render's normal service filesystem is temporary, so the dashboard database can
+reset after a restart or deployment. To retain permanent dashboard history,
+attach a Render persistent disk and set:
+
+```text
+USAGE_DATABASE_PATH=/var/data/usage_events.db
+```
+
+Render logs remain useful for recent activity even without a persistent disk.
+
 ---
 
 ## Project Structure

@@ -1,6 +1,9 @@
+import base64
+import binascii
 import json
 import os
 import re
+import secrets
 import sys
 import threading
 import time
@@ -39,6 +42,12 @@ from webapp_backend import (
     quick_listing_query,
     rows_payload,
     valuation_estimate,
+)
+from webapp_backend.usage_tracking import (
+    device_category,
+    hash_visitor,
+    record_usage_event,
+    usage_summary,
 )
 
 
@@ -139,6 +148,88 @@ def validate_payload(payload):
         raise ValueError(
             f"Prompt is too long. Maximum length is {MAX_PROMPT_LENGTH} characters."
         )
+
+
+def admin_credentials_valid(authorization_header):
+    expected_token = os.getenv("USAGE_ADMIN_TOKEN", "").strip()
+
+    if not expected_token or not authorization_header:
+        return False
+
+    try:
+        scheme, encoded = authorization_header.split(" ", 1)
+
+        if scheme.lower() != "basic":
+            return False
+
+        decoded = base64.b64decode(encoded).decode("utf-8")
+        _, password = decoded.split(":", 1)
+    except (binascii.Error, ValueError, UnicodeDecodeError):
+        return False
+
+    return secrets.compare_digest(password, expected_token)
+
+
+def usage_dashboard_html(summary):
+    endpoint_rows = "".join(
+        f"<tr><td>{escape(item['endpoint'])}</td><td>{item['count']}</td></tr>"
+        for item in summary["events_by_endpoint"]
+    ) or '<tr><td colspan="2">No API activity yet.</td></tr>'
+    device_rows = "".join(
+        f"<tr><td>{escape(item['device'].title())}</td><td>{item['count']}</td></tr>"
+        for item in summary["visits_by_device"]
+    ) or '<tr><td colspan="2">No visits yet.</td></tr>'
+    daily_rows = "".join(
+        f"<tr><td>{escape(item['date'])}</td><td>{item['visits']}</td><td>{item['ai_requests']}</td></tr>"
+        for item in summary["daily_activity"]
+    ) or '<tr><td colspan="3">No activity yet.</td></tr>'
+
+    return f"""<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Property Detector Usage</title>
+  <style>
+    body {{ margin: 0; background: #f5f6f3; color: #17211c; font: 14px system-ui, sans-serif; }}
+    main {{ width: min(980px, calc(100% - 24px)); margin: 0 auto; padding: 24px 0 48px; }}
+    h1 {{ margin: 0 0 4px; font-size: 24px; }}
+    .sub {{ color: #66736b; margin-bottom: 18px; }}
+    .metrics {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(145px, 1fr)); gap: 10px; }}
+    .metric, section {{ background: #fff; border: 1px solid #d7ded8; border-radius: 8px; }}
+    .metric {{ padding: 14px; }}
+    .metric span {{ display: block; color: #66736b; font-size: 11px; text-transform: uppercase; }}
+    .metric strong {{ display: block; margin-top: 5px; font-size: 22px; }}
+    .grid {{ display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 12px; }}
+    section {{ padding: 14px; overflow-x: auto; }}
+    section.wide {{ grid-column: 1 / -1; }}
+    h2 {{ margin: 0 0 10px; font-size: 15px; }}
+    table {{ width: 100%; border-collapse: collapse; }}
+    th, td {{ padding: 7px 5px; border-bottom: 1px solid #edf0ed; text-align: left; }}
+    th {{ color: #66736b; font-size: 11px; text-transform: uppercase; }}
+    td:last-child, th:last-child {{ text-align: right; }}
+    @media (max-width: 640px) {{ .grid {{ grid-template-columns: 1fr; }} section.wide {{ grid-column: auto; }} }}
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Usage Dashboard</h1>
+    <div class="sub">Anonymous activity from the last {summary['days']} days. Prompts and raw IP addresses are not stored.</div>
+    <div class="metrics">
+      <div class="metric"><span>Page visits</span><strong>{summary['page_visits']}</strong></div>
+      <div class="metric"><span>Unique visitors</span><strong>{summary['unique_visitors']}</strong></div>
+      <div class="metric"><span>AI requests</span><strong>{summary['ai_requests']}</strong></div>
+      <div class="metric"><span>AI failures</span><strong>{summary['ai_failures']}</strong></div>
+      <div class="metric"><span>Average AI time</span><strong>{summary['average_ai_duration_ms'] / 1000:.1f}s</strong></div>
+    </div>
+    <div class="grid">
+      <section><h2>Feature usage</h2><table><thead><tr><th>Endpoint</th><th>Uses</th></tr></thead><tbody>{endpoint_rows}</tbody></table></section>
+      <section><h2>Visits by device</h2><table><thead><tr><th>Device</th><th>Visits</th></tr></thead><tbody>{device_rows}</tbody></table></section>
+      <section class="wide"><h2>Daily activity</h2><table><thead><tr><th>Date</th><th>Visits</th><th>AI requests</th></tr></thead><tbody>{daily_rows}</tbody></table></section>
+    </div>
+  </main>
+</body>
+</html>"""
 
 
 def page_template():
@@ -374,12 +465,74 @@ class AppHandler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
+    def send_html(self, html, status=200, extra_headers=None):
+        body = html.encode("utf-8")
+        self.send_response(status)
+        self.send_header("Content-Type", "text/html; charset=utf-8")
+        self.send_security_headers()
+
+        for name, value in (extra_headers or {}).items():
+            self.send_header(name, value)
+
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def usage_identity(self):
+        return (
+            hash_visitor(self.client_key()),
+            device_category(self.headers.get("User-Agent", "")),
+        )
+
+    def record_event(
+        self,
+        event_type,
+        endpoint,
+        payload=None,
+        success=True,
+        status_code=200,
+        started_at=None,
+    ):
+        try:
+            visitor_hash, device = self.usage_identity()
+            duration_ms = (
+                int(round((time.monotonic() - started_at) * 1000))
+                if started_at is not None
+                else 0
+            )
+            record_usage_event(
+                event_type,
+                endpoint,
+                visitor_hash,
+                device=device,
+                purpose=(payload or {}).get("purpose", ""),
+                scenario=(payload or {}).get("scenario", ""),
+                success=success,
+                status_code=status_code,
+                duration_ms=duration_ms,
+            )
+        except Exception as exc:
+            print(f"USAGE_TRACKING_ERROR {exc}", flush=True)
+
     def do_GET(self):
+        started_at = time.monotonic()
         parsed_url = urlparse(self.path)
         path = parsed_url.path
 
         if path == "/health":
             self.send_json({"status": "ok"})
+            return
+
+        if path == "/admin/usage":
+            if not admin_credentials_valid(self.headers.get("Authorization", "")):
+                self.send_html(
+                    "<h1>Authentication required</h1>",
+                    status=401,
+                    extra_headers={"WWW-Authenticate": 'Basic realm="Property Detector Usage"'},
+                )
+                return
+
+            self.send_html(usage_dashboard_html(usage_summary(days=30)))
             return
 
         if path.startswith("/static/"):
@@ -456,9 +609,12 @@ class AppHandler(BaseHTTPRequestHandler):
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
         self.wfile.write(body)
+        self.record_event("page_visit", path, started_at=started_at)
 
     def do_POST(self):
+        started_at = time.monotonic()
         path = urlparse(self.path).path
+        event_type = "ai_request" if path in AI_PATHS else "api_request"
 
         if path not in {"/api/match", "/api/quick-query", "/api/ai-feedback", "/api/ai-fallback", "/api/ai-scenario", "/api/ai-scenario-rank", "/api/ai-scenario-report", "/api/agent-plan", "/api/client-report", "/api/check-openai", "/api/owner-lookup", "/api/estimate", "/api/opportunity-scan"}:
             self.send_error(404)
@@ -466,6 +622,7 @@ class AppHandler(BaseHTTPRequestHandler):
 
         if PUBLIC_MODE and path in PUBLIC_DISABLED_PATHS:
             self.send_json({"error": "This internal tool is disabled in the public app."}, status=403)
+            self.record_event(event_type, path, success=False, status_code=403, started_at=started_at)
             return
 
         if PUBLIC_MODE and path in AI_PATHS and not AI_RATE_LIMITER.allow(self.client_key()):
@@ -478,7 +635,10 @@ class AppHandler(BaseHTTPRequestHandler):
                 },
                 status=429,
             )
+            self.record_event(event_type, path, success=False, status_code=429, started_at=started_at)
             return
+
+        payload = {}
 
         try:
             length = int(self.headers.get("Content-Length", "0"))
@@ -488,6 +648,7 @@ class AppHandler(BaseHTTPRequestHandler):
                     {"error": f"Request body must be between 1 and {MAX_REQUEST_BYTES} bytes."},
                     status=413,
                 )
+                self.record_event(event_type, path, success=False, status_code=413, started_at=started_at)
                 return
 
             payload = json.loads(self.rfile.read(length).decode("utf-8"))
@@ -631,6 +792,12 @@ class AppHandler(BaseHTTPRequestHandler):
                     limit=int(payload.get("limit", 10)),
                 )
             self.send_json(result)
+            self.record_event(
+                event_type,
+                path,
+                payload=payload,
+                started_at=started_at,
+            )
         except Exception as exc:
             traceback.print_exc()
             message = str(exc)
@@ -643,6 +810,14 @@ class AppHandler(BaseHTTPRequestHandler):
                 message = "OpenAI request timed out. Try again, or reduce the number of results."
 
             self.send_json({"error": message}, status=400)
+            self.record_event(
+                event_type,
+                path,
+                payload=payload,
+                success=False,
+                status_code=400,
+                started_at=started_at,
+            )
 
     def client_key(self):
         forwarded_for = self.headers.get("X-Forwarded-For", "")

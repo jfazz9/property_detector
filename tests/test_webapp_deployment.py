@@ -1,4 +1,5 @@
 import pytest
+import base64
 
 import scripts.webapp as webapp
 
@@ -59,3 +60,31 @@ def test_public_page_omits_api_key_controls(monkeypatch):
     assert 'id="opp-scan-sale"' in page
     assert 'id="opp-scan-rent"' in page
     assert "/api/opportunity-scan" not in webapp.PUBLIC_DISABLED_PATHS
+
+
+def test_admin_credentials_require_configured_basic_auth(monkeypatch):
+    monkeypatch.setenv("USAGE_ADMIN_TOKEN", "admin-secret")
+    encoded = base64.b64encode(b"admin:admin-secret").decode("ascii")
+
+    assert webapp.admin_credentials_valid(f"Basic {encoded}")
+    assert not webapp.admin_credentials_valid("")
+    assert not webapp.admin_credentials_valid("Bearer admin-secret")
+    assert not webapp.admin_credentials_valid("Basic not-base64")
+
+
+def test_usage_dashboard_does_not_expose_prompt_data():
+    page = webapp.usage_dashboard_html({
+        "days": 30,
+        "page_visits": 2,
+        "unique_visitors": 1,
+        "ai_requests": 1,
+        "ai_failures": 0,
+        "average_ai_duration_ms": 1200,
+        "events_by_endpoint": [{"endpoint": "/api/estimate", "count": 1}],
+        "visits_by_device": [{"device": "mobile", "count": 2}],
+        "daily_activity": [{"date": "2026-06-12", "visits": 2, "ai_requests": 1}],
+    })
+
+    assert "Usage Dashboard" in page
+    assert "/api/estimate" in page
+    assert "raw IP addresses are not stored" in page

@@ -16,3 +16,7 @@ services:
         value: "14400"
       - key: OPENAI_API_KEY
         sync: false
+      - key: USAGE_ADMIN_TOKEN
+        sync: false
+      - key: USAGE_HASH_SALT
+        sync: false

@@ -31,3 +31,4 @@ data/ar2_floorplan_reference_candidates_*.csv
 *.bak
 *.db-shm
 *.db-wal
+data/usage_events.db
