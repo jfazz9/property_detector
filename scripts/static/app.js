@@ -61,6 +61,7 @@
     const fallbackSection    = document.querySelector("#fallback-section");
     const fallbackResults    = document.querySelector("#fallback-results");
     const status      = document.querySelector("#status");
+    const demoButtons = document.querySelectorAll(".demo-prompt");
     let activeApiKey  = appConfig.serverManagedAi ? "server-managed" : "";
     let lastRankContext = null;
     let lastReportContext = null;
@@ -112,6 +113,52 @@
       scenarioButtons.forEach((btn) => {
         btn.classList.toggle("scenario-selected", Boolean(activeScenario) && btn.dataset.scenario === activeScenario);
       });
+    }
+
+    function resetWorkflowOutput() {
+      summary.innerHTML = "";
+      response.hidden = true;
+      response.querySelector("div").textContent = "";
+      reportToolbar.hidden = true;
+      bestShortlistTitle.hidden = true;
+      aiPanel.hidden = true;
+      aiPanel.innerHTML = "";
+      estimatePanel.hidden = true;
+      estimatePanel.innerHTML = "";
+      opportunityPanel.hidden = true;
+      opportunityPanel.innerHTML = "";
+      error.hidden = true;
+      error.textContent = "";
+      results.innerHTML = "";
+      premiumCompromiseSection.hidden = true;
+      premiumCompromiseResults.innerHTML = "";
+      aboveBudgetSection.hidden = true;
+      aboveBudgetResults.innerHTML = "";
+      fallbackSection.hidden = true;
+      fallbackResults.innerHTML = "";
+      lastRankContext = null;
+      lastReportContext = null;
+      lastBuiltReport = null;
+      lastRenderedData = null;
+      lastFindCandidateUrls = [];
+      lastFindPremiumCandidateUrls = [];
+      setActiveScenario("");
+      setWorkflowStep(0);
+    }
+
+    function applyDemoPrompt(event) {
+      const demo = event.currentTarget;
+      promptBox.value = demo.dataset.prompt || "";
+      intent.value = demo.dataset.intent || "auto";
+      purpose.value = demo.dataset.purpose || "auto";
+
+      if (purpose.value === "sale" || purpose.value === "rent") {
+        quickPurpose.value = purpose.value;
+      }
+
+      resetWorkflowOutput();
+      promptBox.focus();
+      promptBox.scrollIntoView({ behavior: "smooth", block: "center" });
     }
 
     // Sync quick-filter purpose with main purpose
@@ -1493,6 +1540,7 @@
     clientReportButton.addEventListener("click", () => { ensureApiKeyVisible(); runClientReport(); });
     scenarioButtons.forEach((btn) => btn.addEventListener("click", () => { ensureApiKeyVisible(); runScenario(btn.dataset.scenario, btn); }));
     promptBox.addEventListener("keydown", (e) => { if ((e.ctrlKey || e.metaKey) && e.key === "Enter") runSearch(); });
+    demoButtons.forEach((demoButton) => demoButton.addEventListener("click", applyDemoPrompt));
 
     // Set initial state on page load
     setWorkflowStep(0);

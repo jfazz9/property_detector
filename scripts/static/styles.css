@@ -121,6 +121,92 @@
       background: #fff;
     }
 
+    /* Public intro */
+    .intro-panel {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(320px, 0.72fr);
+      gap: 12px;
+      margin-bottom: 14px;
+      align-items: stretch;
+    }
+    .intro-copy,
+    .demo-panel {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      padding: 16px;
+    }
+    .intro-copy {
+      grid-column: 1 / -1;
+    }
+    .intro-copy h2 {
+      font-size: 20px;
+      line-height: 1.2;
+      margin-bottom: 8px;
+    }
+    .intro-copy p {
+      color: #2d3932;
+      line-height: 1.5;
+      max-width: 760px;
+    }
+    .built-with {
+      margin-top: 10px;
+      color: var(--muted) !important;
+      font-size: 13px;
+    }
+    .impact-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+      margin-top: 12px;
+    }
+    .impact-grid article {
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      background: #fbfcfa;
+      padding: 10px;
+      min-width: 0;
+    }
+    .impact-grid h3,
+    .demo-panel h3 {
+      font-size: 13px;
+      margin-bottom: 5px;
+    }
+    .impact-grid p,
+    .demo-panel p {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+    .demo-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .demo-buttons {
+      display: grid;
+      gap: 8px;
+    }
+    .demo-prompt {
+      width: 100%;
+      min-height: 42px;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      background: #f8faf7;
+      color: var(--ink);
+      font: inherit;
+      font-size: 13px;
+      font-weight: 700;
+      text-align: left;
+      padding: 9px 11px;
+      cursor: pointer;
+    }
+    .demo-prompt:hover {
+      border-color: var(--accent);
+      background: #f0faf6;
+      color: var(--accent);
+    }
+
     /* ── Search card ── */
     .search-card {
       background: var(--panel);
@@ -1184,6 +1270,34 @@
   }
   .tools-strip > .estimate {
     width: 100%;
+  }
+
+  .intro-panel {
+    grid-template-columns: 1fr;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+  .intro-copy,
+  .demo-panel {
+    padding: 13px;
+  }
+  .intro-copy h2 {
+    font-size: 18px;
+  }
+  .intro-copy p {
+    font-size: 13px;
+  }
+  .impact-grid {
+    grid-template-columns: 1fr;
+    gap: 7px;
+  }
+  .impact-grid article {
+    padding: 9px;
+  }
+  .demo-prompt {
+    min-height: 46px;
+    font-size: 13px;
+    line-height: 1.25;
   }
 
   .search-card {
