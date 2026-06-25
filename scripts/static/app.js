@@ -74,7 +74,6 @@
     let lastFindCandidateUrls = [];
     let lastFindPremiumCandidateUrls = [];
     let activeScenario = "";
-    const introDismissedKey = "propertyDetectorIntroDismissed";
 
     if (appConfig.publicMode) {
       document.body.classList.add("public-mode");
@@ -84,30 +83,13 @@
       status.textContent = "Public demo";
     }
 
-    function introHasBeenDismissed() {
-      try {
-        return window.localStorage.getItem(introDismissedKey) === "true";
-      } catch (err) {
-        return false;
-      }
-    }
-
-    function rememberIntroDismissed() {
-      try {
-        window.localStorage.setItem(introDismissedKey, "true");
-      } catch (err) {
-        // If storage is unavailable, closing should still work for this page view.
-      }
-    }
-
     function closeIntroModal() {
       if (!introModal) return;
       introModal.hidden = true;
-      rememberIntroDismissed();
     }
 
     function showIntroModal() {
-      if (!introModal || introHasBeenDismissed()) return;
+      if (!introModal) return;
       introModal.hidden = false;
       introModalCard?.focus();
     }
