@@ -312,15 +312,22 @@ def run_active_checks(master_df, checker=check_url, limit=None, delay=0.0, check
     return master_df, pd.DataFrame(results)
 
 
+def deactivation_count(results_df):
+    if results_df.empty:
+        return 0
+
+    return int((~results_df["is_active"].astype(bool)).sum())
+
+
 def inactive_result_ratio(results_df):
     if results_df.empty:
         return 0.0
 
-    return float((~results_df["is_active"].astype(bool)).mean())
+    return deactivation_count(results_df) / len(results_df)
 
 
-def bulk_update_is_suspicious(results_df, max_inactive_ratio=0.35, minimum_checked=10):
-    if len(results_df) < minimum_checked:
+def bulk_update_is_suspicious(results_df, max_inactive_ratio=0.35):
+    if results_df.empty:
         return False
 
     return inactive_result_ratio(results_df) > max_inactive_ratio
@@ -439,18 +446,24 @@ def main():
         print(results_df["active_check_status"].value_counts().to_string())
         print()
         print(results_df[["is_active", "active_check_status", "url"]].head(20).to_string(index=False, max_colwidth=100))
+        print()
+        print(
+            f"Would deactivate {deactivation_count(results_df)} of {len(results_df)} "
+            f"checked active listings ({inactive_result_ratio(results_df):.0%})."
+        )
 
     if not args.write or args.dry_run:
         print()
         print("Preview only: master file was not updated. Add --write to save confirmed results.")
         return
 
+    deactivate_count = deactivation_count(results_df)
     inactive_ratio = inactive_result_ratio(results_df)
 
     if bulk_update_is_suspicious(results_df, args.max_inactive_ratio) and not args.force_write:
         raise RuntimeError(
-            f"Refusing to update master: {inactive_ratio:.0%} of {len(results_df)} checked rows "
-            f"would become inactive, above the {args.max_inactive_ratio:.0%} safety limit. "
+            f"Refusing to update master: {deactivate_count} of {len(results_df)} checked active listings "
+            f"would be deactivated ({inactive_ratio:.0%}), above the {args.max_inactive_ratio:.0%} safety limit. "
             "Review the preview or use --force-write only after manual verification."
         )
 

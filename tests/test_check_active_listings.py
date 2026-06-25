@@ -4,6 +4,7 @@ from scripts.check_active_listings import (
     ActiveCheckResult,
     bulk_update_is_suspicious,
     classify_response,
+    deactivation_count,
     inactive_result_ratio,
     run_active_checks,
     should_confirm_with_browser,
@@ -192,7 +193,16 @@ def test_run_active_checks_only_checks_currently_active_rows():
 def test_bulk_update_circuit_breaker_blocks_mass_deactivation():
     results_df = pd.DataFrame({"is_active": [False] * 8 + [True] * 2})
 
+    assert deactivation_count(results_df) == 8
     assert inactive_result_ratio(results_df) == 0.8
+    assert bulk_update_is_suspicious(results_df, max_inactive_ratio=0.35)
+
+
+def test_bulk_update_circuit_breaker_blocks_small_mass_deactivation():
+    results_df = pd.DataFrame({"is_active": [False] * 3 + [True]})
+
+    assert deactivation_count(results_df) == 3
+    assert inactive_result_ratio(results_df) == 0.75
     assert bulk_update_is_suspicious(results_df, max_inactive_ratio=0.35)
 
 
