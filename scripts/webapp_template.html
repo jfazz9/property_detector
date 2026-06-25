@@ -99,11 +99,12 @@
           <h3>Try a demo prompt</h3>
           <p>Choose an example, press Find, then run the matching scenario.</p>
         </div>
-        <div class="demo-buttons">
-          <button class="demo-prompt" type="button" data-purpose="sale" data-intent="best_value" data-prompt="Find the best value 3 bed villa around 5.5m. Prioritise lower ppsf, larger plot, motivated seller, price reduction and VOT.">Try Example 1: Best value buyer</button>
-          <button class="demo-prompt" type="button" data-purpose="rent" data-intent="auto" data-prompt="Client wants a 3 bed villa in Arabian Ranches 2 max 210k rent. Do not lead with townhouses. Build a budget reality case.">Try Example 2: Budget reality</button>
-          <button class="demo-prompt" type="button" data-purpose="sale" data-intent="listing_opportunity" data-prompt="Find listing opportunities around 5.5m. Prioritise stale, vacant, price-reduced, weakly presented or non-exclusive listings.">Try Example 3: Listing opportunity</button>
-        </div>
+        <select class="demo-prompt-select" id="demo-prompt-select">
+          <option value="">Select a demo prompt</option>
+          <option value="best-value" data-purpose="sale" data-intent="best_value" data-prompt="Find the best value 3 bed villa around 5.5m. Prioritise lower ppsf, larger plot, motivated seller, price reduction and VOT.">Example 1: Best value buyer</option>
+          <option value="budget-reality" data-purpose="rent" data-intent="auto" data-prompt="Client wants a 3 bed villa in Arabian Ranches 2 max 210k rent. Do not lead with townhouses. Build a budget reality case.">Example 2: Budget reality</option>
+          <option value="listing-opportunity" data-purpose="sale" data-intent="listing_opportunity" data-prompt="Find listing opportunities around 5.5m. Prioritise stale, vacant, price-reduced, weakly presented or non-exclusive listings.">Example 3: Listing opportunity</option>
+        </select>
       </div>
     </section>
 
@@ -119,20 +120,6 @@
         <span class="wf-step" id="wf-4a">④ Agent Plan</span>
         <span class="wf-step" id="wf-4b">④ Client Report</span>
       </div>
-    </div>
-
-    <!-- Intelligence tools strip -->
-    <div class="tools-strip" aria-label="Additional intelligence features">
-      <div class="tools-strip-heading">
-        <span class="tools-strip-label">Additional features</span>
-        <span class="tools-strip-subtitle">Intelligence tools</span>
-      </div>
-      <div class="tools-strip-group">
-        <button class="chip opportunity" id="opp-scan-sale" type="button">Sales opportunities</button>
-        <button class="chip opportunity" id="opp-scan-rent" type="button">Rental opportunities</button>
-      </div>
-      <span class="tools-strip-divider"></span>
-      <button class="chip estimate" id="ai-estimate" type="button">Estimate value</button>
     </div>
 
     <!-- Main search card -->
@@ -180,18 +167,12 @@
         </div>
         <button class="find-btn" id="search" type="button">Find</button>
       </div>
+      <section class="summary" id="summary">__SUMMARY_HTML__</section>
       <div class="ai-row">
-        <span class="ai-label">AI</span>
+        <span class="ai-label">AI scenarios</span>
         <button class="chip general" id="ai-feedback" type="button">General</button>
-        <span class="ai-divider"></span>
-        <span class="ai-label">Scenarios</span>
         <button class="chip scenario-button" type="button" data-scenario="best_value">Best value</button>
         <button class="chip scenario-button" type="button" data-scenario="budget_reality">Budget reality</button>
-        <button class="chip scenario-button" type="button" data-scenario="fallback">Fallback</button>
-        <button class="chip scenario-button" type="button" data-scenario="negotiation">Negotiation</button>
-        <button class="chip scenario-button" type="button" data-scenario="listing_opportunity">Listing opp.</button>
-        <button class="chip scenario-button" type="button" data-scenario="upgrade_potential">Upgrade</button>
-        <button class="chip scenario-button" type="button" data-scenario="move_in_ready">Move-in ready</button>
         <label class="auto-build-toggle" title="Run Build report automatically after a scenario ranks the shortlist">
           <input id="auto-build-report" type="checkbox" checked>
           <span>Auto-build</span>
@@ -202,6 +183,20 @@
           <button class="report-chip client-report-chip" id="client-report" type="button">Client report</button>
         </div>
       </div>
+    </div>
+
+    <!-- Intelligence tools strip -->
+    <div class="tools-strip" aria-label="Additional intelligence features">
+      <div class="tools-strip-heading">
+        <span class="tools-strip-label">Additional features</span>
+        <span class="tools-strip-subtitle">Intelligence tools</span>
+      </div>
+      <div class="tools-strip-group">
+        <button class="chip opportunity" id="opp-scan-sale" type="button">Sales opportunities</button>
+        <button class="chip opportunity" id="opp-scan-rent" type="button">Rental opportunities</button>
+      </div>
+      <span class="tools-strip-divider"></span>
+      <button class="chip estimate" id="ai-estimate" type="button">Estimate value</button>
     </div>
 
     <!-- Help panel (hidden by default) -->
@@ -304,7 +299,6 @@
     </section>
 
     <!-- Results area -->
-    <section class="summary" id="summary">__SUMMARY_HTML__</section>
     <div class="toolbar" id="report-toolbar" __RESPONSE_HIDDEN__>
       <button class="ghost" id="print-report" type="button">Save PDF</button>
     </div>

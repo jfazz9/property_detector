@@ -279,6 +279,24 @@
       display: grid;
       gap: 8px;
     }
+    .demo-prompt-select {
+      width: 100%;
+      min-height: 40px;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      background: #f8faf7;
+      color: var(--ink);
+      font: inherit;
+      font-size: 13px;
+      font-weight: 700;
+      padding: 0 10px;
+      cursor: pointer;
+    }
+    .demo-prompt-select:focus {
+      outline: 2px solid rgba(11,107,87,0.18);
+      border-color: var(--accent);
+      background: #fff;
+    }
     .demo-prompt {
       width: 100%;
       min-height: 42px;
@@ -569,7 +587,7 @@
     /* AI chips row */
     .ai-row {
       display: flex;
-      gap: 5px;
+      gap: 6px;
       flex-wrap: wrap;
       align-items: center;
       margin-top: 8px;
@@ -577,12 +595,12 @@
       border-top: 1px solid var(--line);
     }
     .ai-label {
-      font-size: 10px;
+      font-size: 11px;
       font-weight: 700;
       text-transform: uppercase;
-      letter-spacing: 0.07em;
-      color: var(--muted);
-      padding-right: 3px;
+      letter-spacing: 0.06em;
+      color: var(--ink);
+      padding-right: 5px;
     }
     .chip {
       min-height: 24px;
@@ -857,6 +875,12 @@
       flex-wrap: wrap;
       gap: 8px;
       margin-bottom: 14px;
+    }
+    .summary:empty {
+      display: none;
+    }
+    .search-card .summary {
+      margin: 10px 0 0;
     }
     .metric {
       flex: 1;

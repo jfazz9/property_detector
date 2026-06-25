@@ -65,7 +65,7 @@
     const fallbackSection    = document.querySelector("#fallback-section");
     const fallbackResults    = document.querySelector("#fallback-results");
     const status      = document.querySelector("#status");
-    const demoButtons = document.querySelectorAll(".demo-prompt");
+    const demoPromptSelect = document.querySelector("#demo-prompt-select");
     let activeApiKey  = appConfig.serverManagedAi ? "server-managed" : "";
     let lastRankContext = null;
     let lastReportContext = null;
@@ -161,8 +161,10 @@
       setWorkflowStep(0);
     }
 
-    function applyDemoPrompt(event) {
-      const demo = event.currentTarget;
+    function applyDemoPrompt() {
+      const demo = demoPromptSelect?.selectedOptions?.[0];
+      if (!demo || !demo.dataset.prompt) return;
+
       promptBox.value = demo.dataset.prompt || "";
       intent.value = demo.dataset.intent || "auto";
       purpose.value = demo.dataset.purpose || "auto";
@@ -1555,7 +1557,7 @@
     clientReportButton.addEventListener("click", () => { ensureApiKeyVisible(); runClientReport(); });
     scenarioButtons.forEach((btn) => btn.addEventListener("click", () => { ensureApiKeyVisible(); runScenario(btn.dataset.scenario, btn); }));
     promptBox.addEventListener("keydown", (e) => { if ((e.ctrlKey || e.metaKey) && e.key === "Enter") runSearch(); });
-    demoButtons.forEach((demoButton) => demoButton.addEventListener("click", applyDemoPrompt));
+    demoPromptSelect?.addEventListener("change", applyDemoPrompt);
     introModalClose?.addEventListener("click", closeIntroModal);
     introModalPrimary?.addEventListener("click", closeIntroModal);
     introModal?.addEventListener("click", (event) => {
