@@ -219,11 +219,7 @@
 
     /* Public intro */
     .intro-panel {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) minmax(320px, 0.72fr);
-      gap: 12px;
       margin-bottom: 14px;
-      align-items: stretch;
     }
     .intro-copy,
     .demo-panel {
