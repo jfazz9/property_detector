@@ -28,6 +28,7 @@
     const aiReportButton = document.querySelector("#ai-report");
     const agentPlanButton = document.querySelector("#agent-plan");
     const clientReportButton = document.querySelector("#client-report");
+    const reportActions = document.querySelector(".report-actions");
     const autoBuildReport = document.querySelector("#auto-build-report");
     const scenarioButtons = document.querySelectorAll(".scenario-button");
     const checkButton = document.querySelector("#check-openai");
@@ -35,6 +36,7 @@
     const aiKeyToggle = document.querySelector("#ai-key-toggle");
     const helpToggle  = document.querySelector("#help-toggle");
     const helpPanel   = document.querySelector("#help-panel");
+    const toolsStrip  = document.querySelector(".tools-strip");
     const introModal  = document.querySelector("#intro-modal");
     const introModalCard = document.querySelector(".intro-modal-card");
     const introModalClose = document.querySelector("#intro-modal-close");
@@ -49,6 +51,7 @@
     const tokenBox    = document.querySelector("#openai-token");
     const ownerUrlBox = document.querySelector("#owner-url");
     const summary     = document.querySelector("#summary");
+    const aiScenarioNote = document.querySelector("#ai-scenario-note");
     const response    = document.querySelector("#response");
     const aiPanel     = document.querySelector("#ai-panel");
     const reportToolbar = document.querySelector("#report-toolbar");
@@ -76,6 +79,8 @@
     let activeScenario = "";
     let activeFindIntent = "auto";
     let budgetRealityScenarioReady = false;
+
+    toolsStrip?.before(helpPanel);
 
     if (appConfig.publicMode) {
       document.body.classList.add("public-mode");
@@ -109,11 +114,16 @@
       });
       // Button highlights
       promptBox.classList.toggle("prompt-ready", doneUpTo === 0);
+      button.classList.toggle("step-ready", doneUpTo === 0);
       scenarioButtons.forEach(btn => btn.classList.toggle("step-ready", doneUpTo === 1));
       aiReportButton.classList.toggle("step-ready", doneUpTo === 2);
       const outputReady = doneUpTo >= 3;
       agentPlanButton.classList.toggle("step-ready", outputReady);
       clientReportButton.classList.toggle("step-ready", outputReady);
+      if (reportActions) reportActions.hidden = doneUpTo < 2;
+      aiReportButton.hidden = doneUpTo < 2;
+      agentPlanButton.hidden = doneUpTo < 3;
+      clientReportButton.hidden = doneUpTo < 3;
       // Output pills ④ — managed independently, reset when going backwards
       if (doneUpTo < 3) {
         [wf4a, wf4b].forEach(el => el?.classList.remove("done", "active"));
@@ -148,25 +158,39 @@
       activeFindIntent = findIntent || "auto";
       const lockedScenario = scenarioForFindIntent(activeFindIntent);
       const isLocked = Boolean(lockedScenario);
+      const hasFindResults = lastFindCandidateUrls.length > 0;
 
-      aiButton.disabled = isLocked;
-      aiButton.classList.toggle("scenario-locked", isLocked);
+      aiButton.disabled = !hasFindResults || isLocked;
+      aiButton.classList.toggle("scenario-locked", aiButton.disabled);
+      aiButton.title = !hasFindResults
+        ? "Run Find first."
+        : isLocked
+          ? "This Find intent has a matching scenario. Use the active scenario button."
+          : "";
 
       scenarioButtons.forEach((btn) => {
         const scenario = btn.dataset.scenario;
         const lockedByIntent = isLocked && scenario !== lockedScenario;
         const lockedByFallbackRule = scenario === "fallback" && !budgetRealityScenarioReady;
-        const disabled = lockedByIntent || lockedByFallbackRule;
+        const lockedBeforeFind = !hasFindResults;
+        const disabled = lockedBeforeFind || lockedByIntent || lockedByFallbackRule;
         btn.disabled = disabled;
         btn.classList.toggle("scenario-locked", disabled);
-        if (scenario === "fallback") {
+        if (lockedBeforeFind) {
+          btn.title = scenario === "fallback" ? "Run Find first, then Budget reality." : "Run Find first.";
+        } else if (scenario === "fallback") {
           btn.title = budgetRealityScenarioReady ? "" : "Run Budget reality first.";
+        } else if (lockedByIntent) {
+          btn.title = "This Find intent has a matching scenario. Use the active scenario button.";
+        } else {
+          btn.title = "";
         }
       });
     }
 
     function resetWorkflowOutput() {
       summary.innerHTML = "";
+      aiScenarioNote.hidden = true;
       response.hidden = true;
       response.querySelector("div").textContent = "";
       reportToolbar.hidden = true;
@@ -388,6 +412,27 @@
         </article>`).join("");
     }
 
+    function renderBasicSnapshot(items, purposeValue) {
+      return (items || []).slice(0, 3).map((item, index) => `
+        <article class="listing snapshot-listing">
+          <div>
+            <h2>${index + 1}. ${item.title || "Untitled listing"}</h2>
+            <div class="facts">
+              <span class="pill price">${money(item.price, purposeValue)}</span>
+              <span class="pill">${item.bedrooms || "?"} bed</span>
+              <span class="pill">${item.predicted_community || "Unknown"}</span>
+              <span class="pill">${item.predicted_type || "Type unknown"}</span>
+              <span class="pill">${item.property_size_sqft || "?"} sqft</span>
+            </div>
+            <div class="card-actions">
+              <a href="${item.url}" target="_blank" rel="noreferrer">Open listing</a>
+              <button class="mini copy-link-button" type="button" data-copy="${escapeHtml(item.url || "")}">Copy link</button>
+            </div>
+          </div>
+          <div class="score"><span class="score-badge ${scoreBadgeClass(item.match_score)}">${item.match_score}</span></div>
+        </article>`).join("");
+    }
+
     async function copyText(value, btn) {
       if (!value) return;
       try {
@@ -429,8 +474,9 @@
       lastRenderedData = data;
       error.hidden = true;
       spinner.style.display = "none";
-      response.hidden = false;
-      reportToolbar.hidden = false;
+      const hasAiScenarioResult = Boolean(data.rank_context || data.report_context);
+      response.hidden = hasAiScenarioResult;
+      reportToolbar.hidden = hasAiScenarioResult;
       bestShortlistTitle.hidden = false;
       bestShortlistTitle.textContent = data.report_title || "Best Shortlist";
       status.textContent = `${data.rows_searched} rows searched`;
@@ -441,19 +487,22 @@
         metric("Beds", data.enquiry.bedrooms_label),
         metric("Community", data.enquiry.community || "Any"),
       ].join("");
+      aiScenarioNote.hidden = hasAiScenarioResult;
       response.querySelector("div").textContent = [
         "click on ai scenario for a comprehensive result",
         data.client_response || "",
       ].filter(Boolean).join("\n\n");
-      results.innerHTML = renderListings(data.matches || [], data.enquiry.purpose);
+      results.innerHTML = hasAiScenarioResult
+        ? renderListings(data.matches || [], data.enquiry.purpose)
+        : renderBasicSnapshot(data.matches || [], data.enquiry.purpose);
       const premiumCompromises = data.premium_compromise_matches || [];
-      premiumCompromiseSection.hidden = premiumCompromises.length === 0;
+      premiumCompromiseSection.hidden = !hasAiScenarioResult || premiumCompromises.length === 0;
       premiumCompromiseResults.innerHTML = renderListings(premiumCompromises, data.enquiry.purpose);
       const watchlist = data.over_budget_matches || [];
-      aboveBudgetSection.hidden = watchlist.length === 0;
+      aboveBudgetSection.hidden = !hasAiScenarioResult || watchlist.length === 0;
       aboveBudgetResults.innerHTML = renderListings(watchlist, data.enquiry.purpose);
       const fallback = data.fallback_matches || [];
-      fallbackSection.hidden = fallback.length === 0;
+      fallbackSection.hidden = !hasAiScenarioResult || fallback.length === 0;
       fallbackResults.innerHTML = renderListings(fallback, data.enquiry.purpose);
       if (data.rank_context) lastRankContext = data.rank_context;
       if (data.rank_context?.scenario) setActiveScenario(data.rank_context.scenario);
@@ -480,6 +529,7 @@
       promptBox.value = "";
       ownerUrlBox.value = "";
       summary.innerHTML = "";
+      aiScenarioNote.hidden = true;
       response.hidden = true;
       response.querySelector("div").textContent = "";
       reportToolbar.hidden = true;
@@ -1323,6 +1373,8 @@
       if (!token) { error.hidden = false; error.textContent = "Add and check an OpenAI API key first (AI key button above)."; return; }
       if (buttonElement) { buttonElement.disabled = true; buttonElement.textContent = "Thinking…"; }
       error.hidden = true;
+      response.hidden = true;
+      reportToolbar.hidden = true;
       aiPanel.hidden = false;
       const messages = [progressStart, "Adding relevant DXB market comps...", "Sending small batches to OpenAI...", "Ranking shortlist batches...", "Comparing batch winners with market comps...", "Building final enquiry report...", "Still working. This can take a couple of minutes..."];
       let msgIdx = 0;

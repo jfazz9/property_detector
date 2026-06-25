@@ -567,21 +567,48 @@
     #ai-report.build-failed::after {
       content: " ⚠ Retry";
     }
+    @keyframes nextActionGlow {
+      0%, 100% {
+        box-shadow: 0 0 0 2px rgba(11, 107, 87, 0.18), 0 0 0 rgba(11, 107, 87, 0);
+      }
+      50% {
+        box-shadow: 0 0 0 3px rgba(11, 107, 87, 0.28), 0 0 18px rgba(11, 107, 87, 0.34);
+      }
+    }
     /* Prompt box glows green when it's the starting point */
     textarea.prompt-ready {
       border-color: var(--accent);
       box-shadow: 0 0 0 3px #d4f0e8;
       transition: border-color 0.2s, box-shadow 0.2s;
+      animation: nextActionGlow 1.35s ease-in-out infinite;
     }
     /* Buttons light up when they become the active step */
+    .find-btn.step-ready {
+      animation: nextActionGlow 1.35s ease-in-out infinite;
+    }
     .chip.step-ready {
       border-color: var(--accent);
       color: var(--accent);
       background: #f0faf6;
+      animation: nextActionGlow 1.35s ease-in-out infinite;
     }
     .report-chip.step-ready {
       box-shadow: 0 0 0 2px var(--accent);
       opacity: 1;
+      animation: nextActionGlow 1.35s ease-in-out infinite;
+    }
+    .chip.step-ready:disabled,
+    .chip.step-ready.scenario-locked,
+    .report-chip.step-ready:disabled {
+      animation: none;
+    }
+    @media (prefers-reduced-motion: reduce) {
+      textarea.prompt-ready,
+      .find-btn.step-ready,
+      .chip.step-ready,
+      .report-chip.step-ready {
+        animation: none;
+      }
     }
 
     /* AI chips row */
@@ -687,6 +714,9 @@
       gap: 6px;
       align-items: center;
       margin-left: auto;
+    }
+    .report-actions[hidden] {
+      display: none;
     }
     /* Build report — ghost outline; it usually runs automatically */
     .report-chip {
@@ -888,6 +918,15 @@
     }
     .search-card .summary {
       margin: 10px 0 0;
+    }
+    .ai-scenario-note {
+      margin: 8px 0 0;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.4;
+    }
+    .ai-scenario-note[hidden] {
+      display: none;
     }
     .metric {
       flex: 1;
@@ -1113,6 +1152,16 @@
       font-weight: 700;
       line-height: 1.3;
       margin-bottom: 7px;
+    }
+    .snapshot-listing {
+      padding: 10px 12px;
+    }
+    .snapshot-listing h2 {
+      font-size: 14px;
+      margin-bottom: 6px;
+    }
+    .snapshot-listing .facts {
+      margin-bottom: 6px;
     }
     .facts {
       display: flex;
