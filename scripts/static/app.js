@@ -74,6 +74,8 @@
     let lastFindCandidateUrls = [];
     let lastFindPremiumCandidateUrls = [];
     let activeScenario = "";
+    let activeFindIntent = "auto";
+    let budgetRealityScenarioReady = false;
 
     if (appConfig.publicMode) {
       document.body.classList.add("public-mode");
@@ -130,6 +132,39 @@
       });
     }
 
+    function scenarioForFindIntent(findIntent) {
+      const scenarioMap = {
+        best_value: "best_value",
+        budget_reality: "budget_reality",
+        negotiation: "negotiation",
+        listing_opportunity: "listing_opportunity",
+        upgrade_potential: "upgrade_potential",
+        move_in_ready: "move_in_ready",
+      };
+      return scenarioMap[findIntent] || "";
+    }
+
+    function setAiScenarioAvailability(findIntent = "auto") {
+      activeFindIntent = findIntent || "auto";
+      const lockedScenario = scenarioForFindIntent(activeFindIntent);
+      const isLocked = Boolean(lockedScenario);
+
+      aiButton.disabled = isLocked;
+      aiButton.classList.toggle("scenario-locked", isLocked);
+
+      scenarioButtons.forEach((btn) => {
+        const scenario = btn.dataset.scenario;
+        const lockedByIntent = isLocked && scenario !== lockedScenario;
+        const lockedByFallbackRule = scenario === "fallback" && !budgetRealityScenarioReady;
+        const disabled = lockedByIntent || lockedByFallbackRule;
+        btn.disabled = disabled;
+        btn.classList.toggle("scenario-locked", disabled);
+        if (scenario === "fallback") {
+          btn.title = budgetRealityScenarioReady ? "" : "Run Budget reality first.";
+        }
+      });
+    }
+
     function resetWorkflowOutput() {
       summary.innerHTML = "";
       response.hidden = true;
@@ -157,6 +192,8 @@
       lastRenderedData = null;
       lastFindCandidateUrls = [];
       lastFindPremiumCandidateUrls = [];
+      budgetRealityScenarioReady = false;
+      setAiScenarioAvailability("auto");
       setActiveScenario("");
       setWorkflowStep(0);
     }
@@ -404,7 +441,10 @@
         metric("Beds", data.enquiry.bedrooms_label),
         metric("Community", data.enquiry.community || "Any"),
       ].join("");
-      response.querySelector("div").textContent = data.client_response;
+      response.querySelector("div").textContent = [
+        "click on ai scenario for a comprehensive result",
+        data.client_response || "",
+      ].filter(Boolean).join("\n\n");
       results.innerHTML = renderListings(data.matches || [], data.enquiry.purpose);
       const premiumCompromises = data.premium_compromise_matches || [];
       premiumCompromiseSection.hidden = premiumCompromises.length === 0;
@@ -422,6 +462,9 @@
         lastBuiltReport = snapshotBuiltReport(data);
       } else {
         lastBuiltReport = null;
+      }
+      if (Object.prototype.hasOwnProperty.call(data, "find_intent")) {
+        setAiScenarioAvailability(data.find_intent || "auto");
       }
       if (data.report_context?.scenario) setActiveScenario(data.report_context.scenario);
       // Advance the workflow indicator based on how far we've got
@@ -466,6 +509,8 @@
       lastRenderedData = null;
       lastFindCandidateUrls = [];
       lastFindPremiumCandidateUrls = [];
+      budgetRealityScenarioReady = false;
+      setAiScenarioAvailability("auto");
       setActiveScenario("");
       setWorkflowStep(0);
       promptBox.focus();
@@ -474,6 +519,7 @@
     async function runSearch() {
       const text = promptBox.value.trim();
       if (!text) { promptBox.focus(); return; }
+      const findIntent = intent.value || "auto";
       button.disabled = true;
       button.textContent = "Finding…";
       response.hidden = true;
@@ -490,6 +536,7 @@
       spinner.style.display = "block";
       lastFindCandidateUrls = [];
       lastFindPremiumCandidateUrls = [];
+      budgetRealityScenarioReady = false;
       try {
         const res = await fetch("/api/match", {
           method: "POST",
@@ -497,7 +544,7 @@
           body: JSON.stringify({
             prompt: text,
             purpose: purpose.value,
-            intent: intent.value,
+            intent: findIntent,
             listing_scope: listingScope.value,
             listing_communities: selectedListingCommunities(),
             market_scope: marketScope.value,
@@ -507,6 +554,7 @@
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || "Search failed");
+        data.find_intent = findIntent;
         lastFindCandidateUrls = [
           ...(data.matches || []),
           ...(data.premium_compromise_matches || []),
@@ -684,6 +732,11 @@
       const starts = { best_value: "Building value shortlist...", budget_reality: "Building budget reality case...", fallback: "Building premium fallback shortlist...", negotiation: "Building negotiation case...", listing_opportunity: "Finding listing opportunities...", upgrade_potential: "Finding upgrade potential...", move_in_ready: "Finding move-in ready options..." };
       const buttonText = labels[scenario] || "Scenario";
       const rankedData = await runAiReport({ buttonElement, buttonText, endpoint: "/api/ai-scenario-rank", progressStart: starts[scenario] || "Building scenario report...", scenario, candidateUrls: lastFindCandidateUrls, premiumCandidateUrls: lastFindPremiumCandidateUrls });
+
+      if (rankedData && scenario === "budget_reality") {
+        budgetRealityScenarioReady = true;
+        setAiScenarioAvailability(activeFindIntent);
+      }
 
       if (rankedData && autoBuildReport?.checked && lastRankContext?.ranked_urls?.length) {
         return runBuildReport(buttonElement, buttonText);
@@ -1568,5 +1621,6 @@
     });
 
     // Set initial state on page load
+    setAiScenarioAvailability("auto");
     setWorkflowStep(0);
     showIntroModal();

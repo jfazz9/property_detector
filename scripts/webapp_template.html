@@ -93,6 +93,20 @@
       <button id="quick-query" style="min-height:32px;align-self:flex-end;border-radius:6px;border:none;background:var(--accent);color:#fff;font:inherit;font-size:13px;font-weight:700;padding:0 14px;cursor:pointer">Filter</button>
     </div>
 
+    <!-- Intelligence tools strip -->
+    <div class="tools-strip" aria-label="Special intelligence features">
+      <div class="tools-strip-heading">
+        <span class="tools-strip-label">Special features</span>
+        <span class="tools-strip-subtitle">Intelligence tools</span>
+      </div>
+      <div class="tools-strip-group">
+        <button class="chip opportunity" id="opp-scan-sale" type="button">Sales opportunities</button>
+        <button class="chip opportunity" id="opp-scan-rent" type="button">Rental opportunities</button>
+      </div>
+      <span class="tools-strip-divider"></span>
+      <button class="chip estimate" id="ai-estimate" type="button">Estimate value</button>
+    </div>
+
     <section class="intro-panel">
       <div class="demo-panel">
         <div>
@@ -173,6 +187,11 @@
         <button class="chip general" id="ai-feedback" type="button">General</button>
         <button class="chip scenario-button" type="button" data-scenario="best_value">Best value</button>
         <button class="chip scenario-button" type="button" data-scenario="budget_reality">Budget reality</button>
+        <button class="chip scenario-button" type="button" data-scenario="fallback">Fallback</button>
+        <button class="chip scenario-button" type="button" data-scenario="negotiation">Negotiation</button>
+        <button class="chip scenario-button" type="button" data-scenario="listing_opportunity">Listing opp.</button>
+        <button class="chip scenario-button" type="button" data-scenario="upgrade_potential">Upgrade</button>
+        <button class="chip scenario-button" type="button" data-scenario="move_in_ready">Move-in ready</button>
         <label class="auto-build-toggle" title="Run Build report automatically after a scenario ranks the shortlist">
           <input id="auto-build-report" type="checkbox" checked>
           <span>Auto-build</span>
@@ -183,20 +202,6 @@
           <button class="report-chip client-report-chip" id="client-report" type="button">Client report</button>
         </div>
       </div>
-    </div>
-
-    <!-- Intelligence tools strip -->
-    <div class="tools-strip" aria-label="Additional intelligence features">
-      <div class="tools-strip-heading">
-        <span class="tools-strip-label">Additional features</span>
-        <span class="tools-strip-subtitle">Intelligence tools</span>
-      </div>
-      <div class="tools-strip-group">
-        <button class="chip opportunity" id="opp-scan-sale" type="button">Sales opportunities</button>
-        <button class="chip opportunity" id="opp-scan-rent" type="button">Rental opportunities</button>
-      </div>
-      <span class="tools-strip-divider"></span>
-      <button class="chip estimate" id="ai-estimate" type="button">Estimate value</button>
     </div>
 
     <!-- Help panel (hidden by default) -->

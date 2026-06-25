@@ -615,7 +615,14 @@
       cursor: pointer;
     }
     .chip:hover { color: var(--ink); background: var(--wash); }
-    .chip:disabled { opacity: 0.5; cursor: wait; }
+    .chip:disabled { opacity: 0.5; cursor: not-allowed; }
+    .chip.scenario-locked,
+    .chip.scenario-locked:hover {
+      border-color: var(--line);
+      background: #f1f3ef;
+      color: #9aa39c;
+      box-shadow: none;
+    }
     .chip.scenario-selected {
       border-color: var(--accent);
       background: var(--accent);
