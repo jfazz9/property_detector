@@ -7,6 +7,31 @@
   <link rel="stylesheet" href="/static/styles.css">
 </head>
 <body>
+  <div class="intro-modal" id="intro-modal" hidden role="dialog" aria-modal="true" aria-labelledby="intro-modal-title">
+    <div class="intro-modal-backdrop" data-intro-close></div>
+    <section class="intro-modal-card" tabindex="-1">
+      <button class="intro-modal-close" id="intro-modal-close" type="button" aria-label="Close introduction">&#10005;</button>
+      <h2 id="intro-modal-title">AI-assisted property research for Arabian Ranches 2</h2>
+      <p>Property Detector is an AI-assisted property research tool built for Dubai real estate agents operating in Arabian Ranches 2. It helps agents find suitable listings, compare market evidence, identify negotiation angles, and build client-ready reports from messy property data.</p>
+      <p class="built-with"><strong>Built with:</strong> Python web backend, OpenAI API, property listing data, custom filtering/ranking logic, report generation.</p>
+      <div class="intro-modal-grid">
+        <article>
+          <h3>Problem</h3>
+          <p>Dubai agents spend too much time manually checking listings, comparing prices, reviewing comps and preparing client updates.</p>
+        </article>
+        <article>
+          <h3>Solution</h3>
+          <p>I built an AI-powered workflow tool that searches active listing data, ranks opportunities by client intent, compares relevant comps and creates agent/client reports.</p>
+        </article>
+        <article>
+          <h3>Impact</h3>
+          <p>Reduces manual property research from around 60-90 minutes to a few minutes, improves client follow-up quality, and gives agents clearer evidence for pricing, negotiation and listing strategy.</p>
+        </article>
+      </div>
+      <button class="intro-modal-primary" id="intro-modal-primary" type="button">Start using Property Detector</button>
+    </section>
+  </div>
+
   <main>
 
     <!-- Header -->

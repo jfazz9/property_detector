@@ -21,6 +21,102 @@
       padding: 20px 0 60px;
     }
 
+    /* Opening intro modal */
+    .intro-modal[hidden] { display: none; }
+    .intro-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 1000;
+      display: grid;
+      place-items: center;
+      padding: 18px;
+    }
+    .intro-modal-backdrop {
+      position: absolute;
+      inset: 0;
+      background: rgba(23, 33, 28, 0.56);
+    }
+    .intro-modal-card {
+      position: relative;
+      width: min(760px, 100%);
+      max-height: min(86vh, 760px);
+      overflow-y: auto;
+      border: 1px solid rgba(255, 255, 255, 0.42);
+      border-radius: 8px;
+      background: var(--panel);
+      box-shadow: 0 24px 80px rgba(23, 33, 28, 0.28);
+      padding: 24px;
+    }
+    .intro-modal-card:focus {
+      outline: 2px solid rgba(11, 107, 87, 0.22);
+      outline-offset: 3px;
+    }
+    .intro-modal-close {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      width: 32px;
+      height: 32px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #fff;
+      color: var(--muted);
+      cursor: pointer;
+      font: inherit;
+      font-size: 15px;
+      line-height: 1;
+    }
+    .intro-modal-close:hover {
+      background: var(--wash);
+      color: var(--ink);
+    }
+    .intro-modal-card h2 {
+      max-width: 620px;
+      padding-right: 34px;
+      font-size: 24px;
+      line-height: 1.2;
+      margin-bottom: 10px;
+    }
+    .intro-modal-card > p {
+      max-width: 680px;
+      color: #2d3932;
+      line-height: 1.55;
+    }
+    .intro-modal-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+      margin-top: 16px;
+    }
+    .intro-modal-grid article {
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      background: #fbfcfa;
+      padding: 12px;
+    }
+    .intro-modal-grid h3 {
+      font-size: 13px;
+      margin-bottom: 6px;
+    }
+    .intro-modal-grid p {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+    .intro-modal-primary {
+      width: 100%;
+      min-height: 42px;
+      margin-top: 16px;
+      border: none;
+      border-radius: 6px;
+      background: var(--accent);
+      color: #fff;
+      cursor: pointer;
+      font: inherit;
+      font-weight: 700;
+    }
+    .intro-modal-primary:hover { background: #095846; }
+
     /* ── Header ── */
     header {
       display: flex;
@@ -1189,6 +1285,27 @@
   body {
     font-size: 15px;
     overflow-x: hidden;
+  }
+  .intro-modal {
+    padding: 10px;
+    align-items: end;
+  }
+  .intro-modal-card {
+    max-height: 88vh;
+    padding: 18px;
+  }
+  .intro-modal-card h2 {
+    font-size: 20px;
+    line-height: 1.2;
+  }
+  .intro-modal-card > p {
+    font-size: 13px;
+  }
+  .intro-modal-grid {
+    grid-template-columns: 1fr;
+  }
+  .intro-modal-primary {
+    min-height: 46px;
   }
   main {
     width: 100%;

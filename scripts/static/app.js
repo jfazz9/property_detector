@@ -35,6 +35,10 @@
     const aiKeyToggle = document.querySelector("#ai-key-toggle");
     const helpToggle  = document.querySelector("#help-toggle");
     const helpPanel   = document.querySelector("#help-panel");
+    const introModal  = document.querySelector("#intro-modal");
+    const introModalCard = document.querySelector(".intro-modal-card");
+    const introModalClose = document.querySelector("#intro-modal-close");
+    const introModalPrimary = document.querySelector("#intro-modal-primary");
     const commBtn     = document.querySelector("#comm-btn");
     const commPanel   = document.querySelector("#comm-panel");
     const ownerToggle = document.querySelector("#owner-toggle");
@@ -70,6 +74,7 @@
     let lastFindCandidateUrls = [];
     let lastFindPremiumCandidateUrls = [];
     let activeScenario = "";
+    const introDismissedKey = "propertyDetectorIntroDismissed";
 
     if (appConfig.publicMode) {
       document.body.classList.add("public-mode");
@@ -77,6 +82,34 @@
       ownerDrawer.hidden = true;
       drawerOverlay.hidden = true;
       status.textContent = "Public demo";
+    }
+
+    function introHasBeenDismissed() {
+      try {
+        return window.localStorage.getItem(introDismissedKey) === "true";
+      } catch (err) {
+        return false;
+      }
+    }
+
+    function rememberIntroDismissed() {
+      try {
+        window.localStorage.setItem(introDismissedKey, "true");
+      } catch (err) {
+        // If storage is unavailable, closing should still work for this page view.
+      }
+    }
+
+    function closeIntroModal() {
+      if (!introModal) return;
+      introModal.hidden = true;
+      rememberIntroDismissed();
+    }
+
+    function showIntroModal() {
+      if (!introModal || introHasBeenDismissed()) return;
+      introModal.hidden = false;
+      introModalCard?.focus();
     }
 
     const wfSteps = [1, 2, 3].map(n => document.querySelector(`#wf-${n}`));
@@ -1541,6 +1574,15 @@
     scenarioButtons.forEach((btn) => btn.addEventListener("click", () => { ensureApiKeyVisible(); runScenario(btn.dataset.scenario, btn); }));
     promptBox.addEventListener("keydown", (e) => { if ((e.ctrlKey || e.metaKey) && e.key === "Enter") runSearch(); });
     demoButtons.forEach((demoButton) => demoButton.addEventListener("click", applyDemoPrompt));
+    introModalClose?.addEventListener("click", closeIntroModal);
+    introModalPrimary?.addEventListener("click", closeIntroModal);
+    introModal?.addEventListener("click", (event) => {
+      if (event.target?.hasAttribute("data-intro-close")) closeIntroModal();
+    });
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && introModal && !introModal.hidden) closeIntroModal();
+    });
 
     // Set initial state on page load
     setWorkflowStep(0);
+    showIntroModal();
