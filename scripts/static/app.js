@@ -80,6 +80,7 @@
     const fallbackResults    = document.querySelector("#fallback-results");
     const status      = document.querySelector("#status");
     const demoPromptSelect = document.querySelector("#demo-prompt-select");
+    const demoDismiss = document.querySelector("#demo-dismiss");
     let activeApiKey  = appConfig.serverManagedAi ? "server-managed" : "";
     let lastRankContext = null;
     let lastReportContext = null;
@@ -98,8 +99,13 @@
       agent: "propertyDetector.agentPlanHtml",
       client: "propertyDetector.clientReportHtml",
     };
+    const demoDismissedKey = "propertyDetector.demoPromptDismissed";
 
     toolsStrip?.before(helpPanel);
+
+    if (sessionStorage.getItem(demoDismissedKey) === "1" && introPanel) {
+      introPanel.hidden = true;
+    }
 
     if (appConfig.publicMode) {
       document.body.classList.add("public-mode");
@@ -172,7 +178,11 @@
       }
       const hasPrompt = Boolean(promptBox.value.trim());
       if (!hasPrompt) {
-        setGuide("New here? Choose a demo prompt, or type your own search brief to begin.", demoPromptSelect, "demo");
+        if (introPanel?.hidden) {
+          setGuide("Type a search brief to begin, then press Find.", promptBox, "search");
+        } else {
+          setGuide("New here? Choose a demo prompt, or type your own search brief to begin.", demoPromptSelect, "demo");
+        }
       } else if (currentWorkflowStep === 0) {
         setGuide("Good. Press Find to get the current basic snapshot from live listing data.", button, "search");
       } else if (currentWorkflowStep === 1) {
@@ -1960,6 +1970,13 @@
     promptBox.addEventListener("keydown", (e) => { if ((e.ctrlKey || e.metaKey) && e.key === "Enter") runSearch(); });
     promptBox.addEventListener("input", updateGuidedDemo);
     demoPromptSelect?.addEventListener("change", applyDemoPrompt);
+    demoDismiss?.addEventListener("click", () => {
+      if (introPanel) introPanel.hidden = true;
+      sessionStorage.setItem(demoDismissedKey, "1");
+      if (!promptBox.value.trim()) {
+        setGuide("Type a search brief to begin, then press Find.", promptBox, "search");
+      }
+    });
     guidedDemoClose?.addEventListener("click", () => {
       guideDismissed = true;
       if (guidedDemo) guidedDemo.hidden = true;

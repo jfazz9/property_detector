@@ -304,6 +304,30 @@
       flex-direction: column;
       gap: 10px;
     }
+    .demo-panel-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .demo-dismiss {
+      min-height: 28px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #fff;
+      color: var(--muted);
+      font: inherit;
+      font-size: 12px;
+      font-weight: 700;
+      padding: 0 9px;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .demo-dismiss:hover {
+      color: var(--ink);
+      border-color: var(--accent);
+      background: var(--wash);
+    }
     .demo-buttons {
       display: grid;
       gap: 8px;
@@ -1622,6 +1646,15 @@
   .intro-copy,
   .demo-panel {
     padding: 13px;
+  }
+  .demo-panel-header {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .demo-dismiss {
+    width: 100%;
+    min-height: 36px;
   }
   .intro-copy h2 {
     font-size: 18px;
