@@ -1075,18 +1075,62 @@
   </main>
 </body>
 </html>`;
+      writeReportWindow(reportWindow, html);
+    }
+
+    function openReportWindow(title, message) {
       const reportWindow = window.open("", "_blank");
-      if (!reportWindow) {
-        error.hidden = false;
-        error.textContent = "Popup blocked. Allow popups for this page to open the client report.";
-        return;
-      }
+      if (!reportWindow) return null;
+      reportWindow.document.open();
+      reportWindow.document.write(`<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>${escapeHtml(title)}</title>
+  <style>
+    body { font-family: Arial, sans-serif; color: #17211c; margin: 0; background: #eef0ed; }
+    main { max-width: 720px; margin: 0 auto; padding: 48px 20px; }
+    .box { background: #fff; border: 1px solid #d7ded8; border-radius: 8px; padding: 22px; }
+    h1 { margin: 0 0 8px; font-size: 22px; }
+    p { margin: 0; color: #66736b; line-height: 1.5; }
+  </style>
+</head>
+<body><main><section class="box"><h1>${escapeHtml(title)}</h1><p>${escapeHtml(message)}</p></section></main></body>
+</html>`);
+      reportWindow.document.close();
+      return reportWindow;
+    }
+
+    function writeReportWindow(reportWindow, html) {
+      if (!reportWindow) return false;
       reportWindow.document.open();
       reportWindow.document.write(html);
       reportWindow.document.close();
+      return true;
     }
 
-    function renderAgentPlan(plan) {
+    function writeReportError(reportWindow, title, message) {
+      if (!reportWindow || reportWindow.closed) return;
+      reportWindow.document.open();
+      reportWindow.document.write(`<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>${escapeHtml(title)}</title>
+  <style>
+    body { font-family: Arial, sans-serif; color: #17211c; margin: 0; background: #fff4f0; }
+    main { max-width: 720px; margin: 0 auto; padding: 48px 20px; }
+    .box { background: #fff; border: 1px solid #e3aa95; border-radius: 8px; padding: 22px; }
+    h1 { margin: 0 0 8px; font-size: 22px; color: #9b2d20; }
+    p { margin: 0; color: #66736b; line-height: 1.5; }
+  </style>
+</head>
+<body><main><section class="box"><h1>${escapeHtml(title)}</h1><p>${escapeHtml(message)}</p></section></main></body>
+</html>`);
+      reportWindow.document.close();
+    }
+
+    function renderAgentPlan(plan, reportWindow) {
       const actions = Array.isArray(plan.priority_actions) ? plan.priority_actions : [];
       const checklist = Array.isArray(plan.scenario_checklist) ? plan.scenario_checklist : [];
       const logic = Array.isArray(plan.decision_logic) ? plan.decision_logic : [];
@@ -1098,8 +1142,7 @@
         const listingUrl = item.listing_url || "";
         const listingActions = listingUrl ? `
                   <a class="agent-action-link" href="${escapeHtml(listingUrl)}" target="_blank" rel="noreferrer">Open</a>
-                  <button class="agent-action-button copy-link-button" type="button" data-copy="${escapeHtml(listingUrl)}">Copy</button>
-                  <button class="agent-action-button owner-inline-lookup" type="button" data-url="${escapeHtml(listingUrl)}">Owner</button>` : "";
+                  <button class="agent-action-button" type="button" data-copy="${escapeHtml(listingUrl)}" onclick="navigator.clipboard.writeText(this.dataset.copy); this.textContent='Copied';">Copy</button>` : "";
         return `
           <article class="agent-action-card">
             <div class="agent-action-top">
@@ -1127,13 +1170,52 @@
           </article>`;
       }).join("");
 
-      aiPanel.hidden = false;
-      aiPanel.innerHTML = `
+      const generatedAt = new Date().toLocaleString("en-GB", { day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" });
+      const html = `<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>${escapeHtml(plan.title || "Agent Plan of Action")}</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    body { font-family: 'Segoe UI', Arial, sans-serif; color: #17211c; margin: 0; background: #eef0ed; }
+    main { max-width: 980px; margin: 0 auto; padding: 32px 16px 56px; }
+    .actions { position: sticky; top: 0; z-index: 2; display: flex; justify-content: flex-end; gap: 8px; padding: 10px 0 14px; background: #eef0ed; }
+    button { min-height: 34px; padding: 0 16px; border: 0; border-radius: 6px; background: #0b6b57; color: #fff; font-weight: 700; cursor: pointer; font-size: 14px; }
+    .agent-plan { background: #fff; border: 1px solid #d7ded8; border-radius: 8px; padding: 22px; }
+    .agent-plan-header { display: flex; justify-content: space-between; gap: 14px; align-items: flex-start; border-bottom: 1px solid #d7ded8; padding-bottom: 16px; margin-bottom: 16px; }
+    .agent-plan-header h1 { margin: 0 0 6px; font-size: 26px; color: #11231c; }
+    .agent-plan-header p { margin: 0; color: #66736b; line-height: 1.5; font-size: 14px; }
+    .agent-meta { margin-top: 8px; color: #7a8a80; font-size: 12px; letter-spacing: 0.05em; text-transform: uppercase; }
+    .agent-scenario, .agent-mini-pill { display: inline-flex; align-items: center; border-radius: 999px; border: 1px solid #dfc392; background: #fff8ec; color: #8b5a16; padding: 4px 8px; font-size: 11px; font-weight: 700; white-space: nowrap; }
+    .agent-action-grid { display: grid; gap: 12px; margin-bottom: 16px; }
+    .agent-action-card { border: 1px solid #d7ded8; border-radius: 8px; padding: 16px; background: #fffdfa; break-inside: avoid; }
+    .agent-action-top { display: flex; gap: 10px; align-items: flex-start; margin-bottom: 8px; }
+    .agent-priority { width: 32px; height: 32px; flex: 0 0 32px; border-radius: 50%; display: grid; place-items: center; background: #8b5a16; color: #fff; font-weight: 800; }
+    .agent-action-card h3 { margin: 0 0 6px; font-size: 16px; color: #11231c; }
+    .agent-decision-row { display: flex; flex-wrap: wrap; gap: 5px; }
+    .agent-decision { border-radius: 999px; background: #0b6b57; color: #fff; padding: 4px 8px; font-size: 11px; font-weight: 700; }
+    .agent-action-link, .agent-action-button { min-height: 24px; display: inline-flex; align-items: center; border: 1px solid #d7ded8; border-radius: 999px; background: #fff; color: #0b6b57; padding: 0 9px; font: inherit; font-size: 11px; font-weight: 700; text-decoration: none; cursor: pointer; }
+    .agent-action-card p { margin: 7px 0; line-height: 1.5; font-size: 13px; color: #33423a; }
+    .agent-call-box, .agent-buyer-message { border-left: 3px solid #8b5a16; background: #fff8ec; border-radius: 4px; padding: 10px 12px; margin-top: 9px; }
+    .agent-box-label { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; color: #8b5a16; margin-top: 4px; }
+    .agent-question-list ul, .agent-support-box ul { margin: 6px 0 0 18px; padding: 0; font-size: 13px; line-height: 1.45; }
+    .agent-support-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; }
+    .agent-support-box { border: 1px solid #d7ded8; border-radius: 8px; padding: 12px; background: #fbfcfa; break-inside: avoid; }
+    .agent-support-box.warning { background: #fff4f0; border-color: #e3aa95; }
+    .agent-support-box h3 { margin: 0 0 6px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; color: #0b6b57; }
+    @media print { body { background: #fff; } main { max-width: 100%; padding: 0; } .actions { display: none; } .agent-plan, .agent-action-card, .agent-support-box { box-shadow: none; border-color: #ccc; } }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="actions"><button onclick="window.print()">Save PDF</button></div>
         <section class="agent-plan">
           <div class="agent-plan-header">
             <div>
-              <h2>${escapeHtml(plan.title || "Agent Plan of Action")}</h2>
+              <h1>${escapeHtml(plan.title || "Agent Plan of Action")}</h1>
               <p>${escapeHtml(plan.agent_summary || "")}</p>
+              <div class="agent-meta">Prepared: ${escapeHtml(generatedAt)}</div>
             </div>
             <span class="agent-scenario">${escapeHtml(plan.scenario || "Scenario")}</span>
           </div>
@@ -1153,7 +1235,13 @@
             </div>
             ${warnings.length ? `<div class="agent-support-box warning"><h3>Warnings</h3><ul>${warnings.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul></div>` : ""}
           </div>
-        </section>`;
+        </section>
+  </main>
+</body>
+</html>`;
+      writeReportWindow(reportWindow, html);
+      aiPanel.hidden = false;
+      aiPanel.textContent = "Agent plan opened in a new tab.";
     }
 
     async function runAgentPlan() {
@@ -1176,6 +1264,12 @@
         market_read: built?.ai?.market_read || "",
         conclusion: built?.ai?.client_response || "",
       };
+      const reportWindow = openReportWindow("Agent plan", "Generating the agent plan. This window will update automatically.");
+      if (!reportWindow) {
+        error.hidden = false;
+        error.textContent = "Popup blocked. Allow popups for this page to open the agent plan.";
+        return;
+      }
       agentPlanButton.disabled = true;
       agentPlanButton.textContent = "Planning...";
       error.hidden = true;
@@ -1192,12 +1286,13 @@
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || "Agent plan failed");
-        renderAgentPlan(data.agent_plan || {});
+        renderAgentPlan(data.agent_plan || {}, reportWindow);
         wf4a?.classList.remove("active");
         wf4a?.classList.add("done");
       } catch (err) {
         error.hidden = false;
         error.textContent = err.name === "AbortError" ? "Agent plan timed out. Try fewer ranked results." : err.message;
+        writeReportError(reportWindow, "Agent plan failed", error.textContent);
         aiPanel.hidden = true;
       } finally {
         clearTimeout(timeoutId);
@@ -1206,7 +1301,7 @@
       }
     }
 
-    function renderAiClientReport(report) {
+    function renderAiClientReport(report, reportWindow) {
       const txn = report.transaction_section || {};
       const inv = report.inventory_section || {};
       const alt = report.alternative_section || {};
@@ -1403,15 +1498,7 @@
   </main>
 </body>
 </html>`;
-      const reportWindow = window.open("", "_blank");
-      if (!reportWindow) {
-        error.hidden = false;
-        error.textContent = "Popup blocked. Allow popups for this page to open the client report.";
-        return;
-      }
-      reportWindow.document.open();
-      reportWindow.document.write(html);
-      reportWindow.document.close();
+      writeReportWindow(reportWindow, html);
     }
 
     async function runClientReport() {
@@ -1427,6 +1514,12 @@
       }
       const rankedUrls = built.ranked_urls;
       const scenario = built.scenario;
+      const reportWindow = openReportWindow("Client report", "Generating the client report. This window will update automatically.");
+      if (!reportWindow) {
+        error.hidden = false;
+        error.textContent = "Popup blocked. Allow popups for this page to open the client report.";
+        return;
+      }
       clientReportButton.disabled = true;
       clientReportButton.textContent = "Writing…";
       error.hidden = true;
@@ -1443,7 +1536,7 @@
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || "Client report failed");
-        renderAiClientReport(data.client_report || {});
+        renderAiClientReport(data.client_report || {}, reportWindow);
         aiPanel.hidden = false;
         aiPanel.textContent = "Client report opened in a new tab.";
         wf4b?.classList.remove("active");
@@ -1451,6 +1544,7 @@
       } catch (err) {
         error.hidden = false;
         error.textContent = err.name === "AbortError" ? "Client report timed out. Try fewer ranked results." : err.message;
+        writeReportError(reportWindow, "Client report failed", error.textContent);
         aiPanel.hidden = true;
       } finally {
         clearTimeout(timeoutId);
