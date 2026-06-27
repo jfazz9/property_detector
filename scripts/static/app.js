@@ -7,6 +7,8 @@
     const marketScope   = document.querySelector("#market-scope");
     const marketCustom  = document.querySelector("#market-custom");
     const dualCommunities = document.querySelector("#dual-communities");
+    const advancedComps = document.querySelector("#advanced-comps");
+    const advancedCompsPanel = document.querySelector("#advanced-comps-panel");
     const button      = document.querySelector("#search");
     const clearButton = document.querySelector("#clear-page");
     const quickToggle = document.querySelector("#quick-toggle");
@@ -34,9 +36,10 @@
     const checkButton = document.querySelector("#check-openai");
     const keyBar      = document.querySelector("#key-bar");
     const aiKeyToggle = document.querySelector("#ai-key-toggle");
+    const specialToggle = document.querySelector("#special-toggle");
     const helpToggle  = document.querySelector("#help-toggle");
     const helpPanel   = document.querySelector("#help-panel");
-    const toolsStrip  = document.querySelector(".tools-strip");
+    const toolsStrip  = document.querySelector("#tools-strip");
     const introModal  = document.querySelector("#intro-modal");
     const introModalCard = document.querySelector(".intro-modal-card");
     const introModalClose = document.querySelector("#intro-modal-close");
@@ -58,6 +61,9 @@
     const bestShortlistTitle = document.querySelector("#best-shortlist-title");
     const printReportButton  = document.querySelector("#print-report");
     const ownerPanel  = document.querySelector("#owner-panel");
+    const guidedDemo = document.querySelector("#guided-demo");
+    const guidedDemoText = document.querySelector("#guided-demo-text");
+    const guidedDemoClose = document.querySelector("#guided-demo-close");
     const error       = document.querySelector("#error");
     const spinner     = document.querySelector("#spinner");
     const results     = document.querySelector("#results");
@@ -79,6 +85,8 @@
     let activeScenario = "";
     let activeFindIntent = "auto";
     let budgetRealityScenarioReady = false;
+    let guideDismissed = false;
+    let currentWorkflowStep = 0;
 
     toolsStrip?.before(helpPanel);
 
@@ -104,7 +112,56 @@
     const wfSteps = [1, 2, 3].map(n => document.querySelector(`#wf-${n}`));
     const wf4a = document.querySelector("#wf-4a");  // Agent Plan pill
     const wf4b = document.querySelector("#wf-4b");  // Client Report pill
+    function clearGuideFocus() {
+      [
+        demoPromptSelect,
+        promptBox,
+        button,
+        aiButton,
+        aiReportButton,
+        agentPlanButton,
+        clientReportButton,
+        ...scenarioButtons,
+      ].forEach((el) => el?.classList.remove("guide-focus"));
+    }
+
+    function preferredScenarioButton() {
+      const lockedScenario = scenarioForFindIntent(activeFindIntent);
+      if (lockedScenario) {
+        return Array.from(scenarioButtons).find((btn) => btn.dataset.scenario === lockedScenario && !btn.disabled);
+      }
+      return Array.from(scenarioButtons).find((btn) => !btn.disabled) || (!aiButton.disabled ? aiButton : null);
+    }
+
+    function setGuide(message, targets = []) {
+      if (!guidedDemo || guideDismissed) return;
+      guidedDemo.hidden = false;
+      guidedDemoText.textContent = message;
+      clearGuideFocus();
+      (Array.isArray(targets) ? targets : [targets]).forEach((el) => el?.classList.add("guide-focus"));
+    }
+
+    function updateGuidedDemo() {
+      if (guideDismissed) {
+        if (guidedDemo) guidedDemo.hidden = true;
+        clearGuideFocus();
+        return;
+      }
+      const hasPrompt = Boolean(promptBox.value.trim());
+      if (!hasPrompt) {
+        setGuide("New here? Choose a demo prompt, or type your own search brief to begin.", demoPromptSelect);
+      } else if (currentWorkflowStep === 0) {
+        setGuide("Good. Press Find to get the current basic snapshot from live listing data.", button);
+      } else if (currentWorkflowStep === 1) {
+        setGuide("This is the quick snapshot. Pick the highlighted AI scenario to build the full analysis.", preferredScenarioButton());
+      } else if (currentWorkflowStep === 2) {
+        setGuide("Scenario ranking is ready. Build the report to turn the shortlist into market-backed reasoning.", aiReportButton);
+      } else {
+        setGuide("Report is ready. Create a client report, an agent plan, or both.", [clientReportButton, agentPlanButton]);
+      }
+    }
     function setWorkflowStep(doneUpTo) {
+      currentWorkflowStep = doneUpTo;
       // Update steps ①②③
       wfSteps.forEach((el, i) => {
         if (!el) return;
@@ -133,6 +190,7 @@
         if (!wf4a?.classList.contains("done")) wf4a?.classList.add("active");
         if (!wf4b?.classList.contains("done")) wf4b?.classList.add("active");
       }
+      updateGuidedDemo();
     }
 
     function setActiveScenario(scenario) {
@@ -186,6 +244,7 @@
           btn.title = "";
         }
       });
+      updateGuidedDemo();
     }
 
     function resetWorkflowOutput() {
@@ -235,6 +294,7 @@
       }
 
       resetWorkflowOutput();
+      updateGuidedDemo();
       promptBox.focus();
       promptBox.scrollIntoView({ behavior: "smooth", block: "center" });
     }
@@ -310,6 +370,12 @@
     syncAutoBuildState();
 
     // Help panel
+    specialToggle?.addEventListener("click", () => {
+      toolsStrip.hidden = !toolsStrip.hidden;
+      specialToggle.classList.toggle("on", !toolsStrip.hidden);
+      if (!toolsStrip.hidden) toolsStrip.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+
     helpToggle.addEventListener("click", () => {
       helpPanel.hidden = !helpPanel.hidden;
       helpToggle.classList.toggle("on", !helpPanel.hidden);
@@ -319,7 +385,14 @@
       return Array.from(document.querySelectorAll(".listing-community:checked")).map((i) => i.value);
     }
     function selectedMarketCommunities() {
+      if (!advancedComps?.checked) return selectedListingCommunities();
       return Array.from(document.querySelectorAll(".market-community:checked")).map((i) => i.value);
+    }
+    function currentMarketScope() {
+      return advancedComps?.checked ? marketScope.value : listingScope.value;
+    }
+    function currentMarketCommunities() {
+      return selectedMarketCommunities();
     }
 
     function activateCommunityScope(scopeEl, customEl) {
@@ -343,10 +416,15 @@
         if (dualCommunities.checked) activateCommunityScope(listingScope, listingCustom);
       }
     }
-    listingCustom.hidden = listingScope.value !== "custom";
-    marketCustom.hidden  = marketScope.value  !== "custom";
-    listingScope.addEventListener("change", () => { listingCustom.hidden = listingScope.value !== "custom"; });
-    marketScope.addEventListener("change",  () => { marketCustom.hidden  = marketScope.value  !== "custom"; });
+    function syncAdvancedCompsPanel() {
+      advancedCompsPanel.hidden = !advancedComps?.checked;
+      listingCustom.hidden = listingScope.value !== "custom";
+      marketCustom.hidden  = !advancedComps?.checked || marketScope.value !== "custom";
+    }
+    syncAdvancedCompsPanel();
+    listingScope.addEventListener("change", syncAdvancedCompsPanel);
+    marketScope.addEventListener("change", syncAdvancedCompsPanel);
+    advancedComps?.addEventListener("change", syncAdvancedCompsPanel);
     listingCustom.addEventListener("change", handleCommunitySelection);
     marketCustom.addEventListener("change",  handleCommunitySelection);
 
@@ -465,8 +543,8 @@
         enquiry: data.enquiry || {},
         listing_scope: listingScope.value,
         listing_communities: selectedListingCommunities(),
-        market_scope: marketScope.value,
-        market_communities: selectedMarketCommunities(),
+        market_scope: currentMarketScope(),
+        market_communities: currentMarketCommunities(),
       };
     }
 
@@ -597,8 +675,8 @@
             intent: findIntent,
             listing_scope: listingScope.value,
             listing_communities: selectedListingCommunities(),
-            market_scope: marketScope.value,
-            market_communities: selectedMarketCommunities(),
+            market_scope: currentMarketScope(),
+            market_communities: currentMarketCommunities(),
             limit: 20
           })
         });
@@ -1094,7 +1172,7 @@
         const res = await fetch("/api/agent-plan", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ prompt: built?.prompt || text, purpose: built?.purpose || purpose.value, scenario, listing_scope: built?.listing_scope || listingScope.value, listing_communities: built?.listing_communities || selectedListingCommunities(), market_scope: built?.market_scope || marketScope.value, market_communities: built?.market_communities || selectedMarketCommunities(), api_key: token, limit: 6, ranked_urls: rankedUrls, built_matches: builtMatches, built_report: builtReport }),
+          body: JSON.stringify({ prompt: built?.prompt || text, purpose: built?.purpose || purpose.value, scenario, listing_scope: built?.listing_scope || listingScope.value, listing_communities: built?.listing_communities || selectedListingCommunities(), market_scope: built?.market_scope || currentMarketScope(), market_communities: built?.market_communities || currentMarketCommunities(), api_key: token, limit: 6, ranked_urls: rankedUrls, built_matches: builtMatches, built_report: builtReport }),
           signal: controller.signal
         });
         const data = await res.json();
@@ -1345,7 +1423,7 @@
         const res = await fetch("/api/client-report", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ prompt: built.prompt || text, purpose: built.purpose || purpose.value, scenario, listing_scope: built.listing_scope || listingScope.value, listing_communities: built.listing_communities || selectedListingCommunities(), market_scope: built.market_scope || marketScope.value, market_communities: built.market_communities || selectedMarketCommunities(), api_key: token, limit: 6, ranked_urls: rankedUrls, built_matches: built.matches || [], built_report: { title: built.report_title || "", summary: built.client_response || "", market_read: built.ai?.market_read || "", conclusion: built.ai?.client_response || "" } }),
+          body: JSON.stringify({ prompt: built.prompt || text, purpose: built.purpose || purpose.value, scenario, listing_scope: built.listing_scope || listingScope.value, listing_communities: built.listing_communities || selectedListingCommunities(), market_scope: built.market_scope || currentMarketScope(), market_communities: built.market_communities || currentMarketCommunities(), api_key: token, limit: 6, ranked_urls: rankedUrls, built_matches: built.matches || [], built_report: { title: built.report_title || "", summary: built.client_response || "", market_read: built.ai?.market_read || "", conclusion: built.ai?.client_response || "" } }),
           signal: controller.signal
         });
         const data = await res.json();
@@ -1386,7 +1464,7 @@
         const res = await fetch(endpoint, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ prompt: text, purpose: purpose.value, intent: intent.value, listing_scope: listingScope.value, listing_communities: selectedListingCommunities(), market_scope: marketScope.value, market_communities: selectedMarketCommunities(), api_key: token, limit: 10, scenario, ranked_urls: rankedUrls || [], candidate_urls: candidateUrls || [], premium_candidate_urls: premiumCandidateUrls || [] }),
+          body: JSON.stringify({ prompt: text, purpose: purpose.value, intent: intent.value, listing_scope: listingScope.value, listing_communities: selectedListingCommunities(), market_scope: currentMarketScope(), market_communities: currentMarketCommunities(), api_key: token, limit: 10, scenario, ranked_urls: rankedUrls || [], candidate_urls: candidateUrls || [], premium_candidate_urls: premiumCandidateUrls || [] }),
           signal: controller.signal
         });
         const data = await res.json();
@@ -1662,7 +1740,13 @@
     clientReportButton.addEventListener("click", () => { ensureApiKeyVisible(); runClientReport(); });
     scenarioButtons.forEach((btn) => btn.addEventListener("click", () => { ensureApiKeyVisible(); runScenario(btn.dataset.scenario, btn); }));
     promptBox.addEventListener("keydown", (e) => { if ((e.ctrlKey || e.metaKey) && e.key === "Enter") runSearch(); });
+    promptBox.addEventListener("input", updateGuidedDemo);
     demoPromptSelect?.addEventListener("change", applyDemoPrompt);
+    guidedDemoClose?.addEventListener("click", () => {
+      guideDismissed = true;
+      if (guidedDemo) guidedDemo.hidden = true;
+      clearGuideFocus();
+    });
     introModalClose?.addEventListener("click", closeIntroModal);
     introModalPrimary?.addEventListener("click", closeIntroModal);
     introModal?.addEventListener("click", (event) => {
