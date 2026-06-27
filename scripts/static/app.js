@@ -198,7 +198,7 @@
       const outputReady = doneUpTo >= 3;
       agentPlanButton.classList.toggle("step-ready", outputReady);
       clientReportButton.classList.toggle("step-ready", outputReady);
-      if (reportActions) reportActions.hidden = doneUpTo < 2;
+      if (reportActions) reportActions.hidden = doneUpTo < 3;
       aiReportButton.hidden = doneUpTo < 2;
       agentPlanButton.hidden = doneUpTo < 3;
       clientReportButton.hidden = doneUpTo < 3;

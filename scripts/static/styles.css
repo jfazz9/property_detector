@@ -795,10 +795,21 @@
       display: flex;
       gap: 6px;
       align-items: center;
-      margin-left: auto;
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px solid var(--line);
     }
     .report-actions[hidden] {
       display: none;
+    }
+    .report-actions-label {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--ink);
+      padding-right: 5px;
+      white-space: nowrap;
     }
     /* Build report — ghost outline; it usually runs automatically */
     .report-chip {
@@ -1689,19 +1700,20 @@
   }
   .report-actions {
     display: grid;
+    width: 100%;
     grid-template-columns: 1fr 1fr;
-    flex: 0 0 calc(100vw - 20px);
     gap: 8px;
-    margin-left: 8px;
+    margin-top: 10px;
+    padding-top: 10px;
+  }
+  .report-actions-label {
+    grid-column: 1 / -1;
   }
   .report-chip {
     min-height: 44px;
     padding: 0 10px;
     white-space: normal;
     line-height: 1.2;
-  }
-  #ai-report {
-    grid-column: 1 / -1;
   }
 
   .quick-bar {
