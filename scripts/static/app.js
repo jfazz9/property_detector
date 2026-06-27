@@ -14,6 +14,8 @@
     const quickToggle = document.querySelector("#quick-toggle");
     const quickBar    = document.querySelector("#quick-bar");
     const quickButton = document.querySelector("#quick-query");
+    const headerMenuToggle = document.querySelector("#header-menu-toggle");
+    const headerMenuPanel = document.querySelector("#header-menu-panel");
     const quickPurpose   = document.querySelector("#quick-purpose");
     const quickBedMin    = document.querySelector("#quick-bed-min");
     const quickBedMax    = document.querySelector("#quick-bed-max");
@@ -334,6 +336,27 @@
     });
 
     // Quick filter toggle
+    headerMenuToggle?.addEventListener("click", (event) => {
+      event.stopPropagation();
+      headerMenuPanel.hidden = !headerMenuPanel.hidden;
+      headerMenuToggle.classList.toggle("on", !headerMenuPanel.hidden);
+      headerMenuToggle.setAttribute("aria-expanded", String(!headerMenuPanel.hidden));
+    });
+    headerMenuPanel?.addEventListener("click", (event) => {
+      if (event.target?.tagName === "BUTTON") {
+        headerMenuPanel.hidden = true;
+        headerMenuToggle.classList.remove("on");
+        headerMenuToggle.setAttribute("aria-expanded", "false");
+      }
+    });
+    document.addEventListener("click", (event) => {
+      if (!headerMenuPanel || headerMenuPanel.hidden) return;
+      if (headerMenuPanel.contains(event.target) || event.target === headerMenuToggle) return;
+      headerMenuPanel.hidden = true;
+      headerMenuToggle.classList.remove("on");
+      headerMenuToggle.setAttribute("aria-expanded", "false");
+    });
+
     quickToggle.addEventListener("click", () => {
       quickBar.hidden = !quickBar.hidden;
       quickToggle.classList.toggle("on", !quickBar.hidden);

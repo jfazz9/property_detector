@@ -139,8 +139,9 @@
       display: flex;
       align-items: center;
       gap: 6px;
-      flex-wrap: wrap;
+      flex-wrap: nowrap;
       justify-content: flex-end;
+      position: relative;
     }
     .ghost {
       min-height: 30px;
@@ -156,6 +157,34 @@
     }
     .ghost:hover { color: var(--ink); background: var(--wash); }
     .ghost.on { border-color: var(--accent); color: var(--accent); background: #f0faf6; }
+    .header-menu {
+      position: relative;
+    }
+    .header-menu-toggle {
+      min-width: 72px;
+    }
+    .header-menu-panel {
+      position: absolute;
+      top: calc(100% + 6px);
+      right: 0;
+      z-index: 40;
+      width: 190px;
+      display: grid;
+      gap: 6px;
+      padding: 8px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      box-shadow: 0 12px 32px rgba(23, 33, 28, 0.14);
+    }
+    .header-menu-panel[hidden] {
+      display: none;
+    }
+    .header-menu-panel .ghost {
+      width: 100%;
+      justify-content: flex-start;
+      text-align: left;
+    }
     .status-pill {
       font-size: 11px;
       color: var(--muted);
@@ -1507,15 +1536,18 @@
     line-height: 1.35;
   }
   .hdr-actions {
-    max-width: 145px;
+    max-width: none;
     gap: 5px;
   }
   .hdr-actions .ghost {
     min-height: 36px;
     padding: 0 10px;
   }
+  .header-menu-panel {
+    width: min(210px, calc(100vw - 24px));
+  }
   .status-pill {
-    width: 100%;
+    width: auto;
     text-align: center;
     padding: 5px 8px;
   }

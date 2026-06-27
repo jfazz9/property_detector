@@ -42,11 +42,16 @@
       </div>
       <div class="hdr-actions">
         <button class="ghost" id="clear-page" type="button">Reset search</button>
-        <button class="ghost" id="quick-toggle" type="button">Quick filter</button>
-        <button class="ghost" id="owner-toggle" type="button">Owner lookup</button>
-        <button class="ghost" id="ai-key-toggle" type="button">AI key</button>
-        <button class="ghost" id="special-toggle" type="button">Special features</button>
-        <button class="ghost" id="help-toggle" type="button">How agents use this</button>
+        <div class="header-menu">
+          <button class="ghost header-menu-toggle" id="header-menu-toggle" type="button" aria-expanded="false" aria-controls="header-menu-panel">Menu ▾</button>
+          <div class="header-menu-panel" id="header-menu-panel" hidden>
+            <button class="ghost" id="quick-toggle" type="button">Quick filter</button>
+            <button class="ghost" id="owner-toggle" type="button">Owner lookup</button>
+            <button class="ghost" id="ai-key-toggle" type="button">AI key</button>
+            <button class="ghost" id="special-toggle" type="button">Special features</button>
+            <button class="ghost" id="help-toggle" type="button">How agents use this</button>
+          </div>
+        </div>
         <span class="status-pill" id="status">Local data only</span>
       </div>
     </header>
