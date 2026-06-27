@@ -90,6 +90,12 @@
     let budgetRealityScenarioReady = false;
     let guideDismissed = false;
     let currentWorkflowStep = 0;
+    let agentPlanOpened = false;
+    let clientReportOpened = false;
+    const reportStorageKeys = {
+      agent: "propertyDetector.agentPlanHtml",
+      client: "propertyDetector.clientReportHtml",
+    };
 
     toolsStrip?.before(helpPanel);
 
@@ -196,6 +202,10 @@
       aiReportButton.hidden = doneUpTo < 2;
       agentPlanButton.hidden = doneUpTo < 3;
       clientReportButton.hidden = doneUpTo < 3;
+      agentPlanButton.disabled = false;
+      clientReportButton.disabled = false;
+      agentPlanButton.textContent = agentPlanOpened ? "Reopen agent plan" : "Agent plan";
+      clientReportButton.textContent = clientReportOpened ? "Reopen client report" : "Client report";
       // Output pills ④ — managed independently, reset when going backwards
       if (doneUpTo < 3) {
         [wf4a, wf4b].forEach(el => el?.classList.remove("done", "active"));
@@ -291,6 +301,9 @@
       lastFindCandidateUrls = [];
       lastFindPremiumCandidateUrls = [];
       budgetRealityScenarioReady = false;
+      agentPlanOpened = false;
+      clientReportOpened = false;
+      clearSessionReports();
       setAiScenarioAvailability("auto");
       setActiveScenario("");
       setWorkflowStep(0);
@@ -602,6 +615,9 @@
       if (data.report_context) {
         lastReportContext = data.report_context;
         lastBuiltReport = snapshotBuiltReport(data);
+        agentPlanOpened = false;
+        clientReportOpened = false;
+        clearSessionReports();
       } else {
         lastBuiltReport = null;
       }
@@ -653,6 +669,9 @@
       lastFindCandidateUrls = [];
       lastFindPremiumCandidateUrls = [];
       budgetRealityScenarioReady = false;
+      agentPlanOpened = false;
+      clientReportOpened = false;
+      clearSessionReports();
       setAiScenarioAvailability("auto");
       setActiveScenario("");
       setWorkflowStep(0);
@@ -1109,6 +1128,45 @@
       return true;
     }
 
+    function saveSessionReport(kind, html) {
+      try {
+        sessionStorage.setItem(reportStorageKeys[kind], html);
+      } catch (err) {
+        console.warn("Could not store report in session storage", err);
+      }
+    }
+
+    function getSessionReport(kind) {
+      try {
+        return sessionStorage.getItem(reportStorageKeys[kind]) || "";
+      } catch (err) {
+        return "";
+      }
+    }
+
+    function clearSessionReports() {
+      try {
+        sessionStorage.removeItem(reportStorageKeys.agent);
+        sessionStorage.removeItem(reportStorageKeys.client);
+      } catch (err) {
+        console.warn("Could not clear report session storage", err);
+      }
+    }
+
+    function reopenSessionReport(kind, title) {
+      const html = getSessionReport(kind);
+      if (!html) return false;
+      const reportWindow = openReportWindow(title, "Opening stored report...");
+      if (!reportWindow) {
+        error.hidden = false;
+        error.textContent = `Popup blocked. Allow popups for this page to reopen the ${title.toLowerCase()}.`;
+        return true;
+      }
+      writeReportWindow(reportWindow, html);
+      error.hidden = true;
+      return true;
+    }
+
     function writeReportError(reportWindow, title, message) {
       if (!reportWindow || reportWindow.closed) return;
       reportWindow.document.open();
@@ -1239,12 +1297,20 @@
   </main>
 </body>
 </html>`;
+      saveSessionReport("agent", html);
       writeReportWindow(reportWindow, html);
       aiPanel.hidden = false;
       aiPanel.textContent = "Agent plan opened in a new tab.";
     }
 
     async function runAgentPlan() {
+      if (agentPlanOpened) {
+        if (!reopenSessionReport("agent", "Agent plan")) {
+          error.hidden = false;
+          error.textContent = "Agent plan was already opened, but this browser session no longer has the stored report. Run a new search or Build report again to create another.";
+        }
+        return;
+      }
       const text = promptBox.value.trim();
       const token = currentApiToken();
       if (!text) { promptBox.focus(); return; }
@@ -1287,6 +1353,10 @@
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || "Agent plan failed");
         renderAgentPlan(data.agent_plan || {}, reportWindow);
+        agentPlanOpened = true;
+        agentPlanButton.disabled = false;
+        agentPlanButton.textContent = "Reopen agent plan";
+        agentPlanButton.classList.remove("step-ready");
         wf4a?.classList.remove("active");
         wf4a?.classList.add("done");
       } catch (err) {
@@ -1296,8 +1366,10 @@
         aiPanel.hidden = true;
       } finally {
         clearTimeout(timeoutId);
-        agentPlanButton.disabled = false;
-        agentPlanButton.textContent = "Agent plan";
+        if (!agentPlanOpened) {
+          agentPlanButton.disabled = false;
+          agentPlanButton.textContent = "Agent plan";
+        }
       }
     }
 
@@ -1498,10 +1570,18 @@
   </main>
 </body>
 </html>`;
+      saveSessionReport("client", html);
       writeReportWindow(reportWindow, html);
     }
 
     async function runClientReport() {
+      if (clientReportOpened) {
+        if (!reopenSessionReport("client", "Client report")) {
+          error.hidden = false;
+          error.textContent = "Client report was already opened, but this browser session no longer has the stored report. Run a new search or Build report again to create another.";
+        }
+        return;
+      }
       const text = promptBox.value.trim();
       const token = currentApiToken();
       if (!text) { promptBox.focus(); return; }
@@ -1537,6 +1617,10 @@
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || "Client report failed");
         renderAiClientReport(data.client_report || {}, reportWindow);
+        clientReportOpened = true;
+        clientReportButton.disabled = false;
+        clientReportButton.textContent = "Reopen client report";
+        clientReportButton.classList.remove("step-ready");
         aiPanel.hidden = false;
         aiPanel.textContent = "Client report opened in a new tab.";
         wf4b?.classList.remove("active");
@@ -1548,8 +1632,10 @@
         aiPanel.hidden = true;
       } finally {
         clearTimeout(timeoutId);
-        clientReportButton.disabled = false;
-        clientReportButton.textContent = "Client report";
+        if (!clientReportOpened) {
+          clientReportButton.disabled = false;
+          clientReportButton.textContent = "Client report";
+        }
       }
     }
 
