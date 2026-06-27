@@ -64,6 +64,9 @@
     const guidedDemo = document.querySelector("#guided-demo");
     const guidedDemoText = document.querySelector("#guided-demo-text");
     const guidedDemoClose = document.querySelector("#guided-demo-close");
+    const introPanel = document.querySelector(".intro-panel");
+    const searchCard = document.querySelector(".search-card");
+    const aiRow = document.querySelector(".ai-row");
     const error       = document.querySelector("#error");
     const spinner     = document.querySelector("#spinner");
     const results     = document.querySelector("#results");
@@ -133,8 +136,20 @@
       return Array.from(scenarioButtons).find((btn) => !btn.disabled) || (!aiButton.disabled ? aiButton : null);
     }
 
-    function setGuide(message, targets = []) {
+    function dockGuide(position) {
+      if (!guidedDemo) return;
+      if (position === "demo") {
+        introPanel?.before(guidedDemo);
+      } else if (position === "ai") {
+        aiRow?.before(guidedDemo);
+      } else {
+        searchCard?.before(guidedDemo);
+      }
+    }
+
+    function setGuide(message, targets = [], position = "search") {
       if (!guidedDemo || guideDismissed) return;
+      dockGuide(position);
       guidedDemo.hidden = false;
       guidedDemoText.textContent = message;
       clearGuideFocus();
@@ -149,15 +164,15 @@
       }
       const hasPrompt = Boolean(promptBox.value.trim());
       if (!hasPrompt) {
-        setGuide("New here? Choose a demo prompt, or type your own search brief to begin.", demoPromptSelect);
+        setGuide("New here? Choose a demo prompt, or type your own search brief to begin.", demoPromptSelect, "demo");
       } else if (currentWorkflowStep === 0) {
-        setGuide("Good. Press Find to get the current basic snapshot from live listing data.", button);
+        setGuide("Good. Press Find to get the current basic snapshot from live listing data.", button, "search");
       } else if (currentWorkflowStep === 1) {
-        setGuide("This is the quick snapshot. Pick the highlighted AI scenario to build the full analysis.", preferredScenarioButton());
+        setGuide("This is the quick snapshot. Pick the highlighted AI scenario to build the full analysis.", preferredScenarioButton(), "ai");
       } else if (currentWorkflowStep === 2) {
-        setGuide("Scenario ranking is ready. Build the report to turn the shortlist into market-backed reasoning.", aiReportButton);
+        setGuide("Scenario ranking is ready. Build the report to turn the shortlist into market-backed reasoning.", aiReportButton, "ai");
       } else {
-        setGuide("Report is ready. Create a client report, an agent plan, or both.", [clientReportButton, agentPlanButton]);
+        setGuide("Report is ready. Create a client report, an agent plan, or both.", [clientReportButton, agentPlanButton], "ai");
       }
     }
     function setWorkflowStep(doneUpTo) {
