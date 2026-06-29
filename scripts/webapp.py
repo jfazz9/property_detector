@@ -1,18 +1,22 @@
 import base64
 import binascii
+import ipaddress
 import json
 import os
 import re
 import secrets
+import smtplib
 import sys
 import threading
 import time
 import traceback
 from collections import defaultdict, deque
+from email.message import EmailMessage
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from html import escape
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
+from urllib.request import Request, urlopen
 
 from workflow_paths import normalize_purpose
 from webapp_backend import (
@@ -67,6 +71,19 @@ MAX_REQUEST_BYTES = int(os.getenv("MAX_REQUEST_BYTES", "65536"))
 MAX_PROMPT_LENGTH = int(os.getenv("MAX_PROMPT_LENGTH", "2000"))
 AI_RATE_LIMIT_REQUESTS = int(os.getenv("AI_RATE_LIMIT_REQUESTS", "8"))
 AI_RATE_LIMIT_WINDOW_SECONDS = int(os.getenv("AI_RATE_LIMIT_WINDOW_SECONDS", "14400"))
+VISIT_EMAIL_TO = os.getenv("VISIT_EMAIL_TO", "").strip()
+VISIT_EMAIL_FROM = os.getenv("VISIT_EMAIL_FROM", os.getenv("SMTP_USERNAME", "")).strip()
+SMTP_HOST = os.getenv("SMTP_HOST", "").strip()
+SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
+SMTP_USERNAME = os.getenv("SMTP_USERNAME", "").strip()
+SMTP_PASSWORD = os.getenv("SMTP_PASSWORD", "").strip()
+SMTP_USE_TLS = env_bool("SMTP_USE_TLS", True)
+VISIT_EMAIL_ENABLED = env_bool("VISIT_EMAIL_ENABLED", False)
+VISIT_GEOLOOKUP_URL = os.getenv("VISIT_GEOLOOKUP_URL", "https://ipapi.co/{ip}/json/").strip()
+VISIT_LOCATION_CACHE_SECONDS = int(os.getenv("VISIT_LOCATION_CACHE_SECONDS", "3600"))
+
+VISIT_LOCATION_CACHE = {}
+VISIT_LOCATION_CACHE_LOCK = threading.Lock()
 
 AI_PATHS = {
     "/api/ai-feedback",
@@ -118,6 +135,138 @@ AI_RATE_LIMITER = SlidingWindowRateLimiter(
     AI_RATE_LIMIT_REQUESTS,
     AI_RATE_LIMIT_WINDOW_SECONDS,
 )
+
+
+def visit_email_configured():
+    return bool(
+        VISIT_EMAIL_ENABLED
+        and VISIT_EMAIL_TO
+        and VISIT_EMAIL_FROM
+        and SMTP_HOST
+        and SMTP_USERNAME
+        and SMTP_PASSWORD
+    )
+
+
+def is_public_ip(value):
+    try:
+        ip = ipaddress.ip_address(value)
+    except ValueError:
+        return False
+
+    return not (ip.is_private or ip.is_loopback or ip.is_reserved or ip.is_multicast)
+
+
+def lookup_visit_location(ip_address):
+    if not ip_address or not is_public_ip(ip_address):
+        return {
+            "label": "Local/private network",
+            "city": "",
+            "region": "",
+            "country": "",
+            "org": "",
+            "timezone": "",
+        }
+
+    now = time.monotonic()
+
+    with VISIT_LOCATION_CACHE_LOCK:
+        cached = VISIT_LOCATION_CACHE.get(ip_address)
+        if cached and now - cached["created_at"] < VISIT_LOCATION_CACHE_SECONDS:
+            return cached["location"]
+
+    location = {
+        "label": "Unknown location",
+        "city": "",
+        "region": "",
+        "country": "",
+        "org": "",
+        "timezone": "",
+    }
+
+    try:
+        request = Request(
+            VISIT_GEOLOOKUP_URL.format(ip=ip_address),
+            headers={"User-Agent": "PropertyDetector/1.0"},
+        )
+
+        with urlopen(request, timeout=3) as response:
+            data = json.loads(response.read().decode("utf-8"))
+
+        city = data.get("city") or ""
+        region = data.get("region") or data.get("region_name") or ""
+        country = data.get("country_name") or data.get("country") or ""
+        org = data.get("org") or data.get("asn") or ""
+        timezone_name = data.get("timezone") or ""
+        label = ", ".join(part for part in [city, region, country] if part) or "Unknown location"
+        location = {
+            "label": label,
+            "city": city,
+            "region": region,
+            "country": country,
+            "org": org,
+            "timezone": timezone_name,
+        }
+    except Exception as exc:
+        location["label"] = f"Location lookup failed: {exc}"
+
+    with VISIT_LOCATION_CACHE_LOCK:
+        VISIT_LOCATION_CACHE[ip_address] = {
+            "created_at": now,
+            "location": location,
+        }
+
+    return location
+
+
+def send_visit_email(event):
+    if not visit_email_configured():
+        return
+
+    location = lookup_visit_location(event["ip_address"])
+    subject = f"Property Detector visit: {location['label']}"
+    message = EmailMessage()
+    message["Subject"] = subject
+    message["From"] = VISIT_EMAIL_FROM
+    message["To"] = VISIT_EMAIL_TO
+    message.set_content(
+        "\n".join(
+            [
+                "Someone visited Property Detector.",
+                "",
+                f"Page: {event['path']}",
+                f"URL: {event['url']}",
+                f"Approx. location: {location['label']}",
+                f"IP address: {event['ip_address']}",
+                f"Device: {event['device']}",
+                f"User agent: {event['user_agent']}",
+                f"Referrer: {event['referer'] or 'Direct / unknown'}",
+                f"Network/ISP: {location['org'] or 'Unknown'}",
+                f"Timezone: {location['timezone'] or 'Unknown'}",
+                "",
+                "Location is estimated from the visitor IP address and may be inaccurate.",
+            ]
+        )
+    )
+
+    with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=10) as smtp:
+        if SMTP_USE_TLS:
+            smtp.starttls()
+        smtp.login(SMTP_USERNAME, SMTP_PASSWORD)
+        smtp.send_message(message)
+
+
+def notify_visit_async(event):
+    if not visit_email_configured():
+        return
+
+    def worker():
+        try:
+            send_visit_email(event)
+        except Exception as exc:
+            print(f"VISIT_EMAIL_ERROR {exc}", flush=True)
+
+    threading.Thread(target=worker, daemon=True).start()
 
 
 def app_config():
@@ -610,6 +759,7 @@ class AppHandler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
         self.record_event("page_visit", path, started_at=started_at)
+        self.notify_page_visit(path)
 
     def do_POST(self):
         started_at = time.monotonic()
@@ -826,6 +976,21 @@ class AppHandler(BaseHTTPRequestHandler):
             return forwarded_for.split(",", 1)[0].strip()
 
         return self.client_address[0]
+
+    def notify_page_visit(self, path):
+        if not visit_email_configured():
+            return
+
+        host = self.headers.get("Host", "")
+        proto = self.headers.get("X-Forwarded-Proto", "https" if PUBLIC_MODE else "http")
+        notify_visit_async({
+            "path": path,
+            "url": f"{proto}://{host}{self.path}" if host else self.path,
+            "ip_address": self.client_key(),
+            "device": device_category(self.headers.get("User-Agent", "")),
+            "user_agent": self.headers.get("User-Agent", ""),
+            "referer": self.headers.get("Referer", ""),
+        })
 
 
 def main():

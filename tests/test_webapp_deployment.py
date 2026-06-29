@@ -88,3 +88,23 @@ def test_usage_dashboard_does_not_expose_prompt_data():
     assert "Usage Dashboard" in page
     assert "/api/estimate" in page
     assert "raw IP addresses are not stored" in page
+
+
+def test_visit_email_requires_explicit_smtp_config(monkeypatch):
+    monkeypatch.setattr(webapp, "VISIT_EMAIL_ENABLED", True)
+    monkeypatch.setattr(webapp, "VISIT_EMAIL_TO", "owner@example.com")
+    monkeypatch.setattr(webapp, "VISIT_EMAIL_FROM", "alerts@example.com")
+    monkeypatch.setattr(webapp, "SMTP_HOST", "smtp.example.com")
+    monkeypatch.setattr(webapp, "SMTP_USERNAME", "alerts@example.com")
+    monkeypatch.setattr(webapp, "SMTP_PASSWORD", "")
+
+    assert not webapp.visit_email_configured()
+
+    monkeypatch.setattr(webapp, "SMTP_PASSWORD", "secret")
+    assert webapp.visit_email_configured()
+
+
+def test_private_ip_location_does_not_call_geolocation():
+    location = webapp.lookup_visit_location("127.0.0.1")
+
+    assert location["label"] == "Local/private network"

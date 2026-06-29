@@ -113,6 +113,27 @@ Each event is written to:
 - Render logs as a structured `USAGE_EVENT` line
 - `data/usage_events.db` for the private dashboard
 
+### Visit Email Notifications
+
+To receive an email when someone visits the public web app, configure SMTP
+secrets in Render and enable visit emails:
+
+```text
+VISIT_EMAIL_ENABLED=true
+VISIT_EMAIL_TO=you@example.com
+VISIT_EMAIL_FROM=alerts@example.com
+SMTP_HOST=smtp.example.com
+SMTP_PORT=587
+SMTP_USERNAME=alerts@example.com
+SMTP_PASSWORD=your-smtp-password
+SMTP_USE_TLS=true
+```
+
+The email includes the visited page, referrer, device type, user agent, IP
+address, and an approximate location from IP geolocation. IP location is not
+exact and can be wrong when visitors use VPNs, mobile networks, or shared
+office networks. Static files and health checks do not trigger visit emails.
+
 Render's normal service filesystem is temporary, so the dashboard database can
 reset after a restart or deployment. To retain permanent dashboard history,
 attach a Render persistent disk and set:
