@@ -99,13 +99,10 @@
       agent: "propertyDetector.agentPlanHtml",
       client: "propertyDetector.clientReportHtml",
     };
-    const demoDismissedKey = "propertyDetector.demoPromptDismissed";
 
     toolsStrip?.before(helpPanel);
 
-    if (sessionStorage.getItem(demoDismissedKey) === "1" && introPanel) {
-      introPanel.hidden = true;
-    }
+    sessionStorage.removeItem("propertyDetector.demoPromptDismissed");
 
     if (appConfig.publicMode) {
       document.body.classList.add("public-mode");
@@ -670,6 +667,7 @@
     function clearPage() {
       promptBox.value = "";
       ownerUrlBox.value = "";
+      if (introPanel) introPanel.hidden = false;
       summary.innerHTML = "";
       aiScenarioNote.hidden = true;
       response.hidden = true;
@@ -1972,7 +1970,6 @@
     demoPromptSelect?.addEventListener("change", applyDemoPrompt);
     demoDismiss?.addEventListener("click", () => {
       if (introPanel) introPanel.hidden = true;
-      sessionStorage.setItem(demoDismissedKey, "1");
       if (!promptBox.value.trim()) {
         setGuide("Type a search brief to begin, then press Find.", promptBox, "search");
       }
