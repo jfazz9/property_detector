@@ -89,6 +89,7 @@
     let currentWorkflowStep = 0;
     let agentPlanOpened = false;
     let clientReportOpened = false;
+    let scenarioRunInProgress = false;
     const reportStorageKeys = {
       agent: "propertyDetector.agentPlanHtml",
       client: "propertyDetector.clientReportHtml",
@@ -182,9 +183,11 @@
       const isLocked = Boolean(lockedScenario);
       const hasFindResults = lastFindCandidateUrls.length > 0;
 
-      aiButton.disabled = !hasFindResults || isLocked;
+      aiButton.disabled = scenarioRunInProgress || !hasFindResults || isLocked;
       aiButton.classList.toggle("scenario-locked", aiButton.disabled);
-      aiButton.title = !hasFindResults
+      aiButton.title = scenarioRunInProgress
+        ? "Scenario is already running."
+        : !hasFindResults
         ? "Run Find first."
         : isLocked
           ? "This Find intent has a matching scenario. Use the active scenario button."
@@ -195,10 +198,12 @@
         const lockedByIntent = isLocked && scenario !== lockedScenario;
         const lockedByFallbackRule = scenario === "fallback" && !budgetRealityScenarioReady;
         const lockedBeforeFind = !hasFindResults;
-        const disabled = lockedBeforeFind || lockedByIntent || lockedByFallbackRule;
+        const disabled = scenarioRunInProgress || lockedBeforeFind || lockedByIntent || lockedByFallbackRule;
         btn.disabled = disabled;
         btn.classList.toggle("scenario-locked", disabled);
-        if (lockedBeforeFind) {
+        if (scenarioRunInProgress) {
+          btn.title = "Scenario is already running.";
+        } else if (lockedBeforeFind) {
           btn.title = scenario === "fallback" ? "Run Find first, then Budget reality." : "Run Find first.";
         } else if (scenario === "fallback") {
           btn.title = budgetRealityScenarioReady ? "" : "Run Budget reality first.";
@@ -871,25 +876,69 @@
         error.textContent = "Run Find first so the scenario can rank that shortlist.";
         return null;
       }
+      if (scenarioRunInProgress) return null;
+      scenarioRunInProgress = true;
+      setAiScenarioAvailability(activeFindIntent);
       const labels = { best_value: "Best value", budget_reality: "Budget reality", fallback: "Fallback", negotiation: "Negotiation", listing_opportunity: "Listing opp.", upgrade_potential: "Upgrade", move_in_ready: "Move-in ready" };
       const starts = { best_value: "Building value shortlist...", budget_reality: "Building budget reality case...", fallback: "Building premium fallback shortlist...", negotiation: "Building negotiation case...", listing_opportunity: "Finding listing opportunities...", upgrade_potential: "Finding upgrade potential...", move_in_ready: "Finding move-in ready options..." };
       const buttonText = labels[scenario] || "Scenario";
-      const rankedData = await runAiReport({ buttonElement, buttonText, endpoint: "/api/ai-scenario-rank", progressStart: starts[scenario] || "Building scenario report...", scenario, candidateUrls: lastFindCandidateUrls, premiumCandidateUrls: lastFindPremiumCandidateUrls });
+      try {
+        const rankedData = await runAiReport({
+          buttonElement,
+          buttonText,
+          endpoint: "/api/ai-scenario-rank",
+          progressStart: starts[scenario] || "Building scenario report...",
+          progressPart: "Part 1/2",
+          progressMessages: [
+            starts[scenario] || "Building scenario report...",
+            "Checking the Find shortlist...",
+            "Adding relevant DXB market comps...",
+            "Ranking shortlist batches...",
+            "Comparing the strongest matches...",
+            "Preparing the report build..."
+          ],
+          scenario,
+          candidateUrls: lastFindCandidateUrls,
+          premiumCandidateUrls: lastFindPremiumCandidateUrls,
+          restoreButton: false
+        });
 
-      if (rankedData && scenario === "budget_reality") {
-        budgetRealityScenarioReady = true;
+        if (rankedData && scenario === "budget_reality") {
+          budgetRealityScenarioReady = true;
+          setAiScenarioAvailability(activeFindIntent);
+        }
+
+        if (rankedData && lastRankContext?.ranked_urls?.length) {
+          return await runBuildReport(buttonElement, buttonText, { progressPart: "Part 2/2", restoreButton: false });
+        }
+
+        return rankedData;
+      } finally {
+        scenarioRunInProgress = false;
+        if (buttonElement) { buttonElement.disabled = false; buttonElement.textContent = buttonText; }
         setAiScenarioAvailability(activeFindIntent);
       }
-
-      if (rankedData && lastRankContext?.ranked_urls?.length) {
-        return runBuildReport(buttonElement, buttonText);
-      }
-
-      return rankedData;
     }
-    async function runBuildReport(buttonElement = aiReportButton, buttonText = "Build report") {
+    async function runBuildReport(buttonElement = aiReportButton, buttonText = "Build report", options = {}) {
       if (!lastRankContext) { error.hidden = false; error.textContent = "Rank a scenario first, then build the report."; return; }
-      const result = await runAiReport({ buttonElement, buttonText, endpoint: "/api/ai-scenario-report", progressStart: "Building report from ranked shortlist...", scenario: lastRankContext.scenario, rankedUrls: lastRankContext.ranked_urls });
+      const result = await runAiReport({
+        buttonElement,
+        buttonText,
+        endpoint: "/api/ai-scenario-report",
+        progressStart: "Building report from ranked shortlist...",
+        progressPart: options.progressPart || "Part 2/2",
+        progressMessages: [
+          "Building report from ranked shortlist...",
+          "Pulling the ranked winners together...",
+          "Adding market evidence and pricing context...",
+          "Writing the client-facing recommendation...",
+          "Preparing agent plan and client report actions...",
+          "Finishing the report..."
+        ],
+        scenario: lastRankContext.scenario,
+        rankedUrls: lastRankContext.ranked_urls,
+        restoreButton: options.restoreButton
+      });
       if (!result) {
         // Build Report failed — make retry obvious
         aiReportButton.classList.add("build-failed");
@@ -1169,13 +1218,14 @@
       reportWindow.document.close();
     }
 
-    function renderAiProgress(message, percent) {
+    function renderAiProgress(message, percent, partLabel = "") {
       const pct = Math.max(0, Math.min(100, Math.round(percent)));
+      const part = partLabel ? `<span class="ai-progress-part">${escapeHtml(partLabel)}</span>` : "";
       aiPanel.hidden = false;
       aiPanel.innerHTML = `
         <div class="ai-progress">
           <div class="ai-progress-top">
-            <span>${escapeHtml(message)}</span>
+            <span>${part}${escapeHtml(message)}</span>
             <strong>${pct}%</strong>
           </div>
           <div class="ai-progress-track" aria-label="Estimated progress">
@@ -1185,15 +1235,15 @@
         </div>`;
     }
 
-    function startAiProgress(messages, intervalMs = 7000) {
+    function startAiProgress(messages, intervalMs = 7000, partLabel = "") {
       let msgIdx = 0;
       let percent = 8;
-      renderAiProgress(messages[0], percent);
+      renderAiProgress(messages[0], percent, partLabel);
       return setInterval(() => {
         msgIdx = Math.min(msgIdx + 1, messages.length - 1);
         const target = Math.min(92, 12 + msgIdx * 13);
         percent = Math.min(92, Math.max(percent + 7, target));
-        renderAiProgress(messages[msgIdx], percent);
+        renderAiProgress(messages[msgIdx], percent, partLabel);
       }, intervalMs);
     }
 
@@ -1660,7 +1710,7 @@
       }
     }
 
-    async function runAiReport({ buttonElement, buttonText, endpoint, progressStart, scenario, rankedUrls, candidateUrls, premiumCandidateUrls }) {
+    async function runAiReport({ buttonElement, buttonText, endpoint, progressStart, progressPart = "", progressMessages, scenario, rankedUrls, candidateUrls, premiumCandidateUrls, restoreButton = true }) {
       const text = promptBox.value.trim();
       const token = currentApiToken();
       if (!text) { promptBox.focus(); return; }
@@ -1670,8 +1720,10 @@
       response.hidden = true;
       printReportButton.hidden = true;
       aiPanel.hidden = false;
-      const messages = [progressStart, "Adding relevant DXB market comps...", "Sending small batches to OpenAI...", "Ranking shortlist batches...", "Comparing batch winners with market comps...", "Building final enquiry report...", "Still working. This can take a couple of minutes..."];
-      const progressId = startAiProgress(messages, 7000);
+      const messages = Array.isArray(progressMessages) && progressMessages.length
+        ? progressMessages
+        : [progressStart, "Adding relevant DXB market comps...", "Sending small batches to OpenAI...", "Ranking shortlist batches...", "Comparing batch winners with market comps...", "Building final enquiry report...", "Still working. This can take a couple of minutes..."];
+      const progressId = startAiProgress(messages, 7000, progressPart);
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 300000);
       try {
@@ -1684,10 +1736,15 @@
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || "AI feedback failed");
         render(data);
-        aiPanel.hidden = false;
-        aiPanel.innerHTML = `
-          <section class="report-section"><h2>Market Read</h2><pre>${escapeHtml(data.ai.market_read || "No market read returned.")}</pre></section>
-          <section class="report-section"><h2>Conclusion</h2><pre>${escapeHtml(data.ai.client_response || "No conclusion returned.")}</pre></section>`;
+        if (endpoint === "/api/ai-scenario-report") {
+          aiPanel.hidden = true;
+          aiPanel.innerHTML = "";
+        } else {
+          aiPanel.hidden = false;
+          aiPanel.innerHTML = `
+            <section class="report-section"><h2>Market Read</h2><pre>${escapeHtml(data.ai.market_read || "No market read returned.")}</pre></section>
+            <section class="report-section"><h2>Conclusion</h2><pre>${escapeHtml(data.ai.client_response || "No conclusion returned.")}</pre></section>`;
+        }
         return data;
       } catch (err) {
         error.hidden = false;
@@ -1697,7 +1754,7 @@
       } finally {
         clearInterval(progressId);
         clearTimeout(timeoutId);
-        if (buttonElement) { buttonElement.disabled = false; buttonElement.textContent = buttonText; }
+        if (restoreButton && buttonElement) { buttonElement.disabled = false; buttonElement.textContent = buttonText; }
       }
     }
 
