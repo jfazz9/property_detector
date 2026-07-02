@@ -11,24 +11,23 @@
     <div class="intro-modal-backdrop" data-intro-close></div>
     <section class="intro-modal-card" tabindex="-1">
       <button class="intro-modal-close" id="intro-modal-close" type="button" aria-label="Close introduction">&#10005;</button>
-      <h2 id="intro-modal-title">AI-assisted property research for Arabian Ranches 2</h2>
-      <p>Property Detector is an AI-assisted property research tool built for Dubai real estate agents operating in Arabian Ranches 2. It helps agents find suitable listings, compare market evidence, identify negotiation angles, and build client-ready reports from messy property data.</p>
-      <p class="built-with"><strong>Built with:</strong> Python web backend, OpenAI API, property listing data, custom filtering/ranking logic, report generation.</p>
+      <h2 id="intro-modal-title">Property Detector</h2>
+      <p>Start with a client brief. The app searches current Arabian Ranches 2 listing data, then lets you turn the shortlist into scenario analysis, an agent plan, or a client report.</p>
       <div class="intro-modal-grid">
         <article>
-          <h3>Problem</h3>
-          <p>Dubai agents spend too much time manually checking listings, comparing prices, reviewing comps and preparing client updates.</p>
+          <h3>1. Discover</h3>
+          <p>Enter the brief and press Find.</p>
         </article>
         <article>
-          <h3>Solution</h3>
-          <p>I built an AI-powered workflow tool that searches active listing data, ranks opportunities by client intent, compares relevant comps and creates agent/client reports.</p>
+          <h3>2. Focus</h3>
+          <p>Pick the scenario that matches the client or opportunity.</p>
         </article>
         <article>
-          <h3>Impact</h3>
-          <p>Reduces manual property research from around 60-90 minutes to a few minutes, improves client follow-up quality, and gives agents clearer evidence for pricing, negotiation and listing strategy.</p>
+          <h3>3. Output</h3>
+          <p>Build the agent plan or client report when the analysis is ready.</p>
         </article>
       </div>
-      <button class="intro-modal-primary" id="intro-modal-primary" type="button">Start using Property Detector</button>
+      <button class="intro-modal-primary" id="intro-modal-primary" type="button">Start discovery</button>
     </section>
   </div>
 
@@ -203,7 +202,7 @@
       </div>
       <section class="summary" id="summary">__SUMMARY_HTML__</section>
       <p class="ai-scenario-note" id="ai-scenario-note" hidden>Use a scenario for ranked analysis.</p>
-      <div class="ai-row">
+      <div class="ai-row" hidden>
         <span class="ai-label">AI scenarios</span>
         <button class="chip general" id="ai-feedback" type="button">General</button>
         <button class="chip scenario-button" type="button" data-scenario="best_value">Best value</button>

@@ -205,6 +205,7 @@
       scenarioButtons.forEach(btn => btn.classList.toggle("step-ready", doneUpTo === 1));
       aiReportButton.classList.toggle("step-ready", doneUpTo === 2);
       const outputReady = doneUpTo >= 3;
+      if (aiRow) aiRow.hidden = doneUpTo < 1;
       agentPlanButton.classList.toggle("step-ready", outputReady);
       clientReportButton.classList.toggle("step-ready", outputReady);
       if (reportActions) reportActions.hidden = doneUpTo < 3;
@@ -2059,4 +2060,4 @@
     // Set initial state on page load
     setAiScenarioAvailability("auto");
     setWorkflowStep(0);
-    // Keep the app search-first; the intro modal remains available in markup but does not block first use.
+    showIntroModal();

@@ -38,14 +38,14 @@
     }
     .intro-modal-card {
       position: relative;
-      width: min(760px, 100%);
-      max-height: min(86vh, 760px);
+      width: min(640px, 100%);
+      max-height: min(86vh, 620px);
       overflow-y: auto;
       border: 1px solid rgba(255, 255, 255, 0.42);
       border-radius: 8px;
       background: var(--panel);
       box-shadow: 0 24px 80px rgba(23, 33, 28, 0.28);
-      padding: 24px;
+      padding: 22px;
     }
     .intro-modal-card:focus {
       outline: 2px solid rgba(11, 107, 87, 0.22);
@@ -73,14 +73,14 @@
     .intro-modal-card h2 {
       max-width: 620px;
       padding-right: 34px;
-      font-size: 24px;
+      font-size: 23px;
       line-height: 1.2;
       margin-bottom: 10px;
     }
     .intro-modal-card > p {
-      max-width: 680px;
+      max-width: 560px;
       color: #2d3932;
-      line-height: 1.55;
+      line-height: 1.45;
     }
     .intro-modal-grid {
       display: grid;
@@ -851,6 +851,9 @@
       margin-top: 10px;
       padding-top: 10px;
       border-top: 1px solid var(--line);
+    }
+    .ai-row[hidden] {
+      display: none;
     }
     .report-actions[hidden] {
       display: none;
