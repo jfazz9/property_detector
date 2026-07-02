@@ -471,7 +471,7 @@ def page_for_result(
             metric_html("Community", enquiry.get("community") or "Any"),
             metric_html("Intent", enquiry.get("search_intent", "auto").replace("_", " ").title()),
         ])
-        response_html = escape(result["client_response"])
+        response_html = "Run an AI scenario to help find the gems."
         response_hidden = ""
 
         for item in result["matches"]:

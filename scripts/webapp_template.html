@@ -212,10 +212,6 @@
         <button class="chip scenario-button" type="button" data-scenario="listing_opportunity">Listing opp.</button>
         <button class="chip scenario-button" type="button" data-scenario="upgrade_potential">Upgrade</button>
         <button class="chip scenario-button" type="button" data-scenario="move_in_ready">Move-in ready</button>
-        <label class="auto-build-toggle" title="Run Build report automatically after a scenario ranks the shortlist">
-          <input id="auto-build-report" type="checkbox" checked>
-          <span>Auto-build</span>
-        </label>
         <button class="report-chip" id="ai-report" type="button">Build report</button>
       </div>
       <div class="report-actions" hidden>
@@ -255,8 +251,8 @@
           <h3>Two-Step AI</h3>
           <ol>
             <li>General: broad AI feedback when you do not want a specific scenario.</li>
-            <li>Scenario button: ranks the cards in batches, then auto-builds the report when Auto-build is on.</li>
-            <li>Build report: manual retry button that uses the ranked cards and selected comps to produce the deeper market-backed report.</li>
+            <li>Scenario button: ranks the cards in batches, then builds the deeper market-backed report.</li>
+            <li>Build report: manual retry button if the automatic report step fails.</li>
           </ol>
         </article>
         <article class="help-card">
@@ -325,12 +321,12 @@
       <button class="ghost" id="print-report" type="button">Save PDF</button>
     </div>
     <section class="response" id="response" __RESPONSE_HIDDEN__>
-      <strong>Shortlist</strong><br><div>__RESPONSE_HTML__</div>
+      <strong>Simplified shortlist</strong><br><div>__RESPONSE_HTML__</div>
     </section>
     <section class="ai-panel" id="ai-panel" hidden></section>
     <section class="estimate-panel" id="estimate-panel" hidden></section>
     <section class="opportunity-panel" id="opportunity-panel" hidden></section>
-    <h2 class="section-title" id="best-shortlist-title" __RESPONSE_HIDDEN__>Best Shortlist</h2>
+    <h2 class="section-title" id="best-shortlist-title" __RESPONSE_HIDDEN__>Simplified shortlist</h2>
     <section class="error" id="error" __ERROR_HIDDEN__>__ERROR_HTML__</section>
     <div class="spinner" id="spinner"></div>
     <section class="results" id="results">__RESULTS_HTML__</section>

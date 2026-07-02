@@ -33,7 +33,6 @@
     const agentPlanButton = document.querySelector("#agent-plan");
     const clientReportButton = document.querySelector("#client-report");
     const reportActions = document.querySelector(".report-actions");
-    const autoBuildReport = document.querySelector("#auto-build-report");
     const scenarioButtons = document.querySelectorAll(".scenario-button");
     const checkButton = document.querySelector("#check-openai");
     const keyBar      = document.querySelector("#key-bar");
@@ -421,13 +420,6 @@
     closeOwnerDrawer.addEventListener("click", closeDrawer);
     drawerOverlay.addEventListener("click", closeDrawer);
 
-    // Auto-build toggle — grey out Build Report button while checked
-    function syncAutoBuildState() {
-      aiReportButton?.classList.toggle("build-auto", !!autoBuildReport?.checked);
-    }
-    autoBuildReport?.addEventListener("change", syncAutoBuildState);
-    syncAutoBuildState();
-
     // Help panel
     specialToggle?.addEventListener("click", () => {
       toolsStrip.hidden = !toolsStrip.hidden;
@@ -645,7 +637,9 @@
       response.hidden = hasAiScenarioResult;
       reportToolbar.hidden = hasAiScenarioResult;
       bestShortlistTitle.hidden = false;
-      bestShortlistTitle.textContent = data.report_title || "Best Shortlist";
+      bestShortlistTitle.textContent = hasAiScenarioResult
+        ? (data.report_title || "Scenario shortlist")
+        : "Simplified shortlist";
       status.textContent = `${data.rows_searched} rows searched`;
       summary.innerHTML = [
         metric("Purpose", data.enquiry.purpose),
@@ -655,10 +649,7 @@
         metric("Community", data.enquiry.community || "Any"),
       ].join("");
       aiScenarioNote.hidden = hasAiScenarioResult;
-      response.querySelector("div").textContent = [
-        "click on ai scenario for a comprehensive result",
-        data.client_response || "",
-      ].filter(Boolean).join("\n\n");
+      response.querySelector("div").textContent = "Run an AI scenario to help find the gems.";
       results.innerHTML = hasAiScenarioResult
         ? renderListings(data.matches || [], data.enquiry.purpose)
         : renderBasicSnapshot(data.matches || [], data.enquiry.purpose);
@@ -705,7 +696,7 @@
       response.querySelector("div").textContent = "";
       reportToolbar.hidden = true;
       bestShortlistTitle.hidden = true;
-      bestShortlistTitle.textContent = "Best Shortlist";
+      bestShortlistTitle.textContent = "Simplified shortlist";
       aiPanel.hidden = true;
       aiPanel.innerHTML = "";
       estimatePanel.hidden = true;
@@ -962,7 +953,7 @@
         setAiScenarioAvailability(activeFindIntent);
       }
 
-      if (rankedData && autoBuildReport?.checked && lastRankContext?.ranked_urls?.length) {
+      if (rankedData && lastRankContext?.ranked_urls?.length) {
         return runBuildReport(buttonElement, buttonText);
       }
 
