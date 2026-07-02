@@ -58,13 +58,9 @@
     const aiScenarioNote = document.querySelector("#ai-scenario-note");
     const response    = document.querySelector("#response");
     const aiPanel     = document.querySelector("#ai-panel");
-    const reportToolbar = document.querySelector("#report-toolbar");
     const bestShortlistTitle = document.querySelector("#best-shortlist-title");
     const printReportButton  = document.querySelector("#print-report");
     const ownerPanel  = document.querySelector("#owner-panel");
-    const guidedDemo = document.querySelector("#guided-demo");
-    const guidedDemoText = document.querySelector("#guided-demo-text");
-    const guidedDemoClose = document.querySelector("#guided-demo-close");
     const introPanel = document.querySelector(".intro-panel");
     const searchCard = document.querySelector(".search-card");
     const aiRow = document.querySelector(".ai-row");
@@ -90,7 +86,6 @@
     let activeScenario = "";
     let activeFindIntent = "auto";
     let budgetRealityScenarioReady = false;
-    let guideDismissed = false;
     let currentWorkflowStep = 0;
     let agentPlanOpened = false;
     let clientReportOpened = false;
@@ -125,70 +120,6 @@
     const wfSteps = [1, 2, 3].map(n => document.querySelector(`#wf-${n}`));
     const wf4a = document.querySelector("#wf-4a");  // Agent Plan pill
     const wf4b = document.querySelector("#wf-4b");  // Client Report pill
-    function clearGuideFocus() {
-      [
-        demoPromptSelect,
-        promptBox,
-        button,
-        aiButton,
-        aiReportButton,
-        agentPlanButton,
-        clientReportButton,
-        ...scenarioButtons,
-      ].forEach((el) => el?.classList.remove("guide-focus"));
-    }
-
-    function preferredScenarioButton() {
-      const lockedScenario = scenarioForFindIntent(activeFindIntent);
-      if (lockedScenario) {
-        return Array.from(scenarioButtons).find((btn) => btn.dataset.scenario === lockedScenario && !btn.disabled);
-      }
-      return Array.from(scenarioButtons).find((btn) => !btn.disabled) || (!aiButton.disabled ? aiButton : null);
-    }
-
-    function dockGuide(position) {
-      if (!guidedDemo) return;
-      if (position === "demo") {
-        introPanel?.before(guidedDemo);
-      } else if (position === "ai") {
-        aiRow?.before(guidedDemo);
-      } else {
-        searchCard?.before(guidedDemo);
-      }
-    }
-
-    function setGuide(message, targets = [], position = "search") {
-      if (!guidedDemo || guideDismissed) return;
-      dockGuide(position);
-      guidedDemo.hidden = false;
-      guidedDemoText.textContent = message;
-      clearGuideFocus();
-      (Array.isArray(targets) ? targets : [targets]).forEach((el) => el?.classList.add("guide-focus"));
-    }
-
-    function updateGuidedDemo() {
-      if (guideDismissed) {
-        if (guidedDemo) guidedDemo.hidden = true;
-        clearGuideFocus();
-        return;
-      }
-      const hasPrompt = Boolean(promptBox.value.trim());
-      if (!hasPrompt) {
-        if (introPanel?.hidden) {
-          setGuide("Type a brief, then press Find.", promptBox, "search");
-        } else {
-          setGuide("Choose a demo, or type a brief.", demoPromptSelect, "demo");
-        }
-      } else if (currentWorkflowStep === 0) {
-        setGuide("Press Find.", button, "search");
-      } else if (currentWorkflowStep === 1) {
-        setGuide("Pick a scenario.", preferredScenarioButton(), "ai");
-      } else if (currentWorkflowStep === 2) {
-        setGuide("Build the report.", aiReportButton, "ai");
-      } else {
-        setGuide("Open client report or agent plan.", [clientReportButton, agentPlanButton], "ai");
-      }
-    }
     function setWorkflowStep(doneUpTo) {
       currentWorkflowStep = doneUpTo;
       // Update steps ①②③
@@ -224,7 +155,6 @@
         if (!wf4a?.classList.contains("done")) wf4a?.classList.add("active");
         if (!wf4b?.classList.contains("done")) wf4b?.classList.add("active");
       }
-      updateGuidedDemo();
     }
 
     function setActiveScenario(scenario) {
@@ -278,7 +208,6 @@
           btn.title = "";
         }
       });
-      updateGuidedDemo();
     }
 
     function resetWorkflowOutput() {
@@ -286,7 +215,7 @@
       aiScenarioNote.hidden = true;
       response.hidden = true;
       response.querySelector("div").textContent = "";
-      reportToolbar.hidden = true;
+      printReportButton.hidden = true;
       bestShortlistTitle.hidden = true;
       aiPanel.hidden = true;
       aiPanel.innerHTML = "";
@@ -331,7 +260,6 @@
       }
 
       resetWorkflowOutput();
-      updateGuidedDemo();
       promptBox.focus();
       promptBox.scrollIntoView({ behavior: "smooth", block: "center" });
     }
@@ -635,7 +563,7 @@
       spinner.style.display = "none";
       const hasAiScenarioResult = Boolean(data.rank_context || data.report_context);
       response.hidden = hasAiScenarioResult;
-      reportToolbar.hidden = hasAiScenarioResult;
+      printReportButton.hidden = false;
       bestShortlistTitle.hidden = false;
       bestShortlistTitle.textContent = hasAiScenarioResult
         ? (data.report_title || "Scenario shortlist")
@@ -694,7 +622,7 @@
       aiScenarioNote.hidden = true;
       response.hidden = true;
       response.querySelector("div").textContent = "";
-      reportToolbar.hidden = true;
+      printReportButton.hidden = true;
       bestShortlistTitle.hidden = true;
       bestShortlistTitle.textContent = "Simplified shortlist";
       aiPanel.hidden = true;
@@ -738,7 +666,7 @@
       button.disabled = true;
       button.textContent = "Finding…";
       response.hidden = true;
-      reportToolbar.hidden = true;
+      printReportButton.hidden = true;
       bestShortlistTitle.hidden = true;
       error.hidden = true;
       results.innerHTML = "";
@@ -1740,7 +1668,7 @@
       if (buttonElement) { buttonElement.disabled = true; buttonElement.textContent = "Thinking…"; }
       error.hidden = true;
       response.hidden = true;
-      reportToolbar.hidden = true;
+      printReportButton.hidden = true;
       aiPanel.hidden = false;
       const messages = [progressStart, "Adding relevant DXB market comps...", "Sending small batches to OpenAI...", "Ranking shortlist batches...", "Comparing batch winners with market comps...", "Building final enquiry report...", "Still working. This can take a couple of minutes..."];
       const progressId = startAiProgress(messages, 7000);
@@ -2026,18 +1954,9 @@
     clientReportButton.addEventListener("click", () => { ensureApiKeyVisible(); runClientReport(); });
     scenarioButtons.forEach((btn) => btn.addEventListener("click", () => { ensureApiKeyVisible(); runScenario(btn.dataset.scenario, btn); }));
     promptBox.addEventListener("keydown", (e) => { if ((e.ctrlKey || e.metaKey) && e.key === "Enter") runSearch(); });
-    promptBox.addEventListener("input", updateGuidedDemo);
     demoPromptSelect?.addEventListener("change", applyDemoPrompt);
     demoDismiss?.addEventListener("click", () => {
       if (introPanel) introPanel.hidden = true;
-      if (!promptBox.value.trim()) {
-        setGuide("Type a brief, then press Find.", promptBox, "search");
-      }
-    });
-    guidedDemoClose?.addEventListener("click", () => {
-      guideDismissed = true;
-      if (guidedDemo) guidedDemo.hidden = true;
-      clearGuideFocus();
     });
     introModalClose?.addEventListener("click", closeIntroModal);
     introModalPrimary?.addEventListener("click", closeIntroModal);

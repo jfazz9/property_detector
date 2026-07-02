@@ -48,6 +48,7 @@
             <button class="ghost" id="owner-toggle" type="button">Owner lookup</button>
             <button class="ghost" id="ai-key-toggle" type="button">AI key</button>
             <button class="ghost" id="special-toggle" type="button">Special features</button>
+            <button class="ghost" id="print-report" type="button" hidden>Save PDF</button>
             <button class="ghost" id="help-toggle" type="button">Help</button>
           </div>
         </div>
@@ -115,13 +116,11 @@
     <section class="intro-panel">
       <div class="demo-panel">
         <div class="demo-panel-header">
-          <div>
-            <h3>Demo prompts</h3>
-          </div>
-          <button class="demo-dismiss" id="demo-dismiss" type="button">Dismiss</button>
+          <label for="demo-prompt-select">Sample prompts</label>
+          <button class="demo-dismiss" id="demo-dismiss" type="button" aria-label="Close sample prompts">&times;</button>
         </div>
         <select class="demo-prompt-select" id="demo-prompt-select">
-          <option value="">Select a demo prompt</option>
+          <option value="">Select a sample prompt</option>
           <option value="best-value" data-purpose="sale" data-intent="best_value" data-prompt="Find the best value 3 bed villa around 5.5m. Prioritise lower ppsf, larger plot, motivated seller, price reduction and VOT.">Example 1: Best value buyer</option>
           <option value="budget-reality" data-purpose="rent" data-intent="auto" data-prompt="Client wants a 3 bed villa in Arabian Ranches 2 max 210k rent. Do not lead with townhouses. Build a budget reality case.">Example 2: Budget reality</option>
           <option value="listing-opportunity" data-purpose="sale" data-intent="listing_opportunity" data-prompt="Find listing opportunities around 5.5m. Prioritise stale, vacant, price-reduced, weakly presented or non-exclusive listings.">Example 3: Listing opportunity</option>
@@ -143,14 +142,6 @@
       </div>
     </div>
     <p class="workflow-subtitle">Search, run a scenario, then build the report.</p>
-    <section class="guided-demo" id="guided-demo" aria-live="polite">
-      <div>
-        <span class="guided-demo-kicker">Next step</span>
-        <p id="guided-demo-text">Choose a demo or type a search brief.</p>
-      </div>
-      <button class="guided-demo-close" id="guided-demo-close" type="button" aria-label="Hide guided demo">Dismiss</button>
-    </section>
-
     <!-- Main search card -->
     <div class="search-card">
       <textarea id="prompt" name="prompt" placeholder="e.g. 3 bed villa in AR2, budget 5.5m">__PROMPT__</textarea>
@@ -317,9 +308,6 @@
     </section>
 
     <!-- Results area -->
-    <div class="toolbar" id="report-toolbar" __RESPONSE_HIDDEN__>
-      <button class="ghost" id="print-report" type="button">Save PDF</button>
-    </div>
     <section class="response" id="response" __RESPONSE_HIDDEN__>
       <strong>Simplified shortlist</strong><br><div>__RESPONSE_HTML__</div>
     </section>
