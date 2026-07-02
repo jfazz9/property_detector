@@ -45,6 +45,7 @@ PROCESSED_COLUMNS = [
     "url",
     "scraped_at",
     "title",
+    "image_url",
     "price",
     "sale_price",
     "rent_price",
@@ -185,6 +186,7 @@ def is_arabian_ranches_2_listing(row):
 def process_raw_row(row, purpose="sale", target_area="Arabian Ranches 2"):
     body = str(row.get("full_page_text") or "")
     title = row.get("title")
+    image_url = clean_optional_text(row.get("image_url_dom")) or clean_optional_text(row.get("image_url"))
     scraped_datetime = parse_scraped_at(row.get("scraped_at"))
 
     page_status = clean_optional_text(row.get("page_status")) or "ok"
@@ -238,6 +240,7 @@ def process_raw_row(row, purpose="sale", target_area="Arabian Ranches 2"):
         "url": row.get("url"),
         "scraped_at": row.get("scraped_at"),
         "title": title,
+        "image_url": image_url,
         "price": clean_number(price),
         "sale_price": clean_number(price) if purpose == "sale" else None,
         "rent_price": clean_number(price) if purpose == "rent" else None,

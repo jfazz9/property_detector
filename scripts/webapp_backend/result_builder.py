@@ -23,6 +23,7 @@ def rows_payload(matches_df, price_column):
         "outdoor_matches",
         "match_reasons",
         "title",
+        "image_url",
         "description",
         "description_json",
         "url",

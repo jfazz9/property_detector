@@ -186,6 +186,7 @@ def scrape_listing_page(driver, url, verification_wait, verification_retries, lo
         "size_dom": dom_snapshot.get("size_text"),
         "size_sqm_dom": dom_snapshot.get("size_sqm_title"),
         "price_per_area_dom": dom_snapshot.get("price_per_area_text"),
+        "image_url_dom": dom_snapshot.get("image_url"),
         "agent_name_dom": dom_snapshot.get("agent_name") or agent_name,
         "agent_profile_url_dom": dom_snapshot.get("agent_profile_url"),
         "agent_rating_dom": dom_snapshot.get("agent_rating"),

@@ -49,7 +49,7 @@
             <button class="ghost" id="owner-toggle" type="button">Owner lookup</button>
             <button class="ghost" id="ai-key-toggle" type="button">AI key</button>
             <button class="ghost" id="special-toggle" type="button">Special features</button>
-            <button class="ghost" id="help-toggle" type="button">How agents use this</button>
+            <button class="ghost" id="help-toggle" type="button">Help</button>
           </div>
         </div>
         <span class="status-pill" id="status">Local data only</span>
@@ -117,8 +117,7 @@
       <div class="demo-panel">
         <div class="demo-panel-header">
           <div>
-            <h3>Try a demo prompt</h3>
-            <p>Choose an example, press Find, then run the matching scenario.</p>
+            <h3>Demo prompts</h3>
           </div>
           <button class="demo-dismiss" id="demo-dismiss" type="button">Dismiss</button>
         </div>
@@ -144,11 +143,11 @@
         <span class="wf-step" id="wf-4b">④ Client Report</span>
       </div>
     </div>
-    <p class="workflow-subtitle">Start here: type a search, press Find, pick a scenario, then create a client report, agent plan, or both.</p>
+    <p class="workflow-subtitle">Search, run a scenario, then build the report.</p>
     <section class="guided-demo" id="guided-demo" aria-live="polite">
       <div>
-        <span class="guided-demo-kicker">Guided demo</span>
-        <p id="guided-demo-text">New here? Choose a demo prompt, then follow the highlighted next action.</p>
+        <span class="guided-demo-kicker">Next step</span>
+        <p id="guided-demo-text">Choose a demo or type a search brief.</p>
       </div>
       <button class="guided-demo-close" id="guided-demo-close" type="button" aria-label="Hide guided demo">Dismiss</button>
     </section>
@@ -203,7 +202,7 @@
         <button class="find-btn" id="search" type="button">Find</button>
       </div>
       <section class="summary" id="summary">__SUMMARY_HTML__</section>
-      <p class="ai-scenario-note" id="ai-scenario-note" hidden>Find gives a basic snapshot. AI scenarios build the full analysis.</p>
+      <p class="ai-scenario-note" id="ai-scenario-note" hidden>Use a scenario for ranked analysis.</p>
       <div class="ai-row">
         <span class="ai-label">AI scenarios</span>
         <button class="chip general" id="ai-feedback" type="button">General</button>
@@ -229,35 +228,31 @@
 
     <!-- Help panel (hidden by default) -->
     <section class="help-panel" id="help-panel" hidden>
-      <h2>How agents use this tool</h2>
+      <h2>Help</h2>
       <div class="help-grid">
-        <article class="help-card wide">
-          <h3>Agent Workflow</h3>
+        <article class="help-card">
+          <h3>Workflow</h3>
           <ol>
-            <li>Enter buyer/tenant brief.</li>
-            <li>Filter by community, budget, beds and property type.</li>
-            <li>Run scenario: best value / negotiation / budget reality.</li>
-            <li>Review AI-ranked shortlist.</li>
-            <li>Build agent plan or client report.</li>
-            <li>Use report for follow-up, viewing strategy or owner/listing call.</li>
+            <li>Enter brief.</li>
+            <li>Press Find.</li>
+            <li>Run scenario.</li>
+            <li>Build report.</li>
           </ol>
         </article>
-        <article class="help-card wide">
-          <h3>Estimate Value (AI)</h3>
+        <article class="help-card">
+          <h3>Estimate Value</h3>
           <p>Enter a description of the property in the prompt box, then press <strong>Estimate value</strong>. Requires an OpenAI key. Returns a low / mid / high valuation range with AI reasoning. Works for both sales and rentals — rental estimates are shown as annual figures.</p>
-          <p>Include as much detail as possible: community, villa type, bedrooms, and condition notes.</p>
+          <p>Include community, type, bedrooms, and condition.</p>
           <code>Rosa Type 3, 4 bed, corner plot, fully upgraded, private pool</code>
-          <code>Samara Type 2, 4 bed villa, standard condition, vacant on transfer</code>
-          <code>Lila Type 2 rental, 4 bed, furnished, excellent finishes</code>
           <p>The estimator filters comparable active listings by community and type together — a Type 2 in Samara is never mixed with a Type 2 in Lila. BUA above the standard range for that type is treated as an extension and factors into the estimate.</p>
         </article>
-        <article class="help-card wide">
+        <article class="help-card">
           <h3>Scope Controls</h3>
           <p>Listings controls what appears in Find. Comps controls which market sales or rentals OpenAI uses for evidence. Keep Listings broad for discovery; use Custom listings when the client will only accept specific communities.</p>
           <code>Example: 4 bed villa around 7m in Azalea</code>
           <p>Set Listings to Custom and tick Azalea + Lila if the client accepts Lila but not Casa/Samara. Set Comps to Custom and tick the same communities if you want the report to benchmark that exact buyer pool.</p>
         </article>
-        <article class="help-card wide">
+        <article class="help-card">
           <h3>Two-Step AI</h3>
           <ol>
             <li>General: broad AI feedback when you do not want a specific scenario.</li>
@@ -265,7 +260,7 @@
             <li>Build report: manual retry button that uses the ranked cards and selected comps to produce the deeper market-backed report.</li>
           </ol>
         </article>
-        <article class="help-card wide">
+        <article class="help-card">
           <h3>Villa Type Prediction</h3>
           <p>The database predicts villa types using <code>data/ar2_villa_type_reference.csv</code>. Each community has its own type definitions — a Type 2 in Samara is a different villa from a Type 2 in Casa.</p>
           <ul>
@@ -331,7 +326,7 @@
       <button class="ghost" id="print-report" type="button">Save PDF</button>
     </div>
     <section class="response" id="response" __RESPONSE_HIDDEN__>
-      <strong>Shortlist summary</strong><br><div>__RESPONSE_HTML__</div>
+      <strong>Shortlist</strong><br><div>__RESPONSE_HTML__</div>
     </section>
     <section class="ai-panel" id="ai-panel" hidden></section>
     <section class="estimate-panel" id="estimate-panel" hidden></section>
@@ -342,17 +337,17 @@
     <section class="results" id="results">__RESULTS_HTML__</section>
     <section id="premium-compromise-section" hidden>
       <h2 class="section-title">Premium Compromises</h2>
-      <div class="watchlist-note">Higher-quality or closer-to-budget options that miss a hard spec, shown separately from primary matches.</div>
+      <div class="watchlist-note">Good options that miss one hard spec.</div>
       <div class="results" id="premium-compromise-results"></div>
     </section>
     <section id="above-budget-section" __ABOVE_BUDGET_HIDDEN__>
       <h2 class="section-title">Above Budget Watchlist</h2>
-      <div class="watchlist-note">Suitable options above the search ceiling, shown separately for market context.</div>
+      <div class="watchlist-note">Suitable but above budget.</div>
       <div class="results" id="above-budget-results">__ABOVE_BUDGET_HTML__</div>
     </section>
     <section id="fallback-section" hidden>
       <h2 class="section-title">Fallback Alternatives</h2>
-      <div class="watchlist-note">Premium compromise options first, then budget alternatives.</div>
+      <div class="watchlist-note">Compromises and cheaper alternatives.</div>
       <div class="results" id="fallback-results"></div>
     </section>
   </main>

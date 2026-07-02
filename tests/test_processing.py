@@ -82,6 +82,7 @@ def test_process_raw_row_uses_dom_values():
         "url": "https://example.com/listing",
         "scraped_at": "2026-05-13 10:00:00",
         "title": "Sale in Lila: 4BR Villa",
+        "image_url_dom": "https://www.propertyfinder.ae/images/property/lila-main.jpg",
         "page_status": "ok",
         "price_dom": "6,700,000",
         "bedrooms_dom": "4 Beds",
@@ -130,6 +131,7 @@ def test_process_raw_row_uses_dom_values():
     assert processed["agency_name"] == "SEENIUN PROPERTIES L.L.C"
     assert processed["listed_age"] == "2 months ago"
     assert processed["listed_date"] == "2026-03-14"
+    assert processed["image_url"] == "https://www.propertyfinder.ae/images/property/lila-main.jpg"
 
 
 def test_process_raw_row_adds_rent_values():

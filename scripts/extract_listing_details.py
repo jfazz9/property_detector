@@ -126,6 +126,63 @@ def get_dom_snapshot(driver):
                 }
             };
 
+            const firstSrcsetUrl = (srcset) => {
+                if (!srcset) return null;
+                const candidates = srcset.split(',')
+                    .map((item) => item.trim().split(/\\s+/)[0])
+                    .filter(Boolean);
+                return candidates[candidates.length - 1] || null;
+            };
+
+            const imageUrlFromElement = (element) => {
+                if (!element) return null;
+                return absoluteUrl(
+                    element.currentSrc ||
+                    element.src ||
+                    element.getAttribute('src') ||
+                    element.getAttribute('data-src') ||
+                    firstSrcsetUrl(element.getAttribute('srcset')) ||
+                    firstSrcsetUrl(element.getAttribute('data-srcset'))
+                );
+            };
+
+            const isLikelyPropertyImage = (url, element) => {
+                if (!url) return false;
+                const lowerUrl = url.toLowerCase();
+                const label = [
+                    element.getAttribute('alt'),
+                    element.getAttribute('aria-label'),
+                    element.getAttribute('data-testid'),
+                    element.className,
+                ].join(' ').toLowerCase();
+
+                if (/logo|avatar|agent|agency|broker|map|icon|placeholder|spinner/.test(lowerUrl + ' ' + label)) {
+                    return false;
+                }
+
+                const width = element.naturalWidth || element.clientWidth || 0;
+                const height = element.naturalHeight || element.clientHeight || 0;
+                return (width >= 300 && height >= 180) || /propertyfinder|pf-/.test(lowerUrl);
+            };
+
+            const firstPropertyImage = () => {
+                const metaImage = document.querySelector('meta[property="og:image"], meta[name="twitter:image"]');
+                const metaUrl = absoluteUrl(metaImage ? metaImage.getAttribute('content') : null);
+                if (metaUrl && !/logo|avatar|agent|agency|map|icon|placeholder/.test(metaUrl.toLowerCase())) {
+                    return metaUrl;
+                }
+
+                const images = Array.from(document.querySelectorAll('main img, picture img, img'));
+                for (const image of images) {
+                    const url = imageUrlFromElement(image);
+                    if (isLikelyPropertyImage(url, image)) {
+                        return url;
+                    }
+                }
+
+                return null;
+            };
+
             const textByLabel = (labelText) => {
                 const wanted = labelText.toLowerCase();
                 const spans = Array.from(document.querySelectorAll('span, p, div'));
@@ -160,6 +217,7 @@ def get_dom_snapshot(driver):
                 size_text: text('[data-testid="property-attributes-size"]'),
                 size_sqm_title: attr('[data-testid="property-attributes-size"] span', 'title'),
                 price_per_area_text: text('[data-testid="property-attributes-price-per-area"]'),
+                image_url: firstPropertyImage(),
                 agent_name: text('[data-testid="property-detail-agent-name"]'),
                 agent_profile_url: absoluteUrl(attr('[data-testid="agent-link-with-name"]', 'href') || attr('[data-testid="agent-link-with-image"]', 'href')),
                 agent_rating: agentRating,
@@ -813,6 +871,7 @@ def extract_listing_details(driver, url):
     agent_name = agent_name or loaded_agent_name
     agency_name = get_field_after_label(driver, "regulatory_authority_name")
     listed_age = get_field_after_label(driver, "regulatory_listed")
+    dom_snapshot = get_dom_snapshot(driver)
 
     fallback_agent_name, fallback_agency_name = extract_agent_and_agency(body)
     agent_name = agent_name or fallback_agent_name
@@ -834,6 +893,7 @@ def extract_listing_details(driver, url):
         "url": url,
         "scraped_at": scraped_at,
         "title": title,
+        "image_url": dom_snapshot.get("image_url"),
         "price": price,
         "bedrooms": beds,
         "bathrooms": baths,

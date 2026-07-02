@@ -176,18 +176,18 @@
       const hasPrompt = Boolean(promptBox.value.trim());
       if (!hasPrompt) {
         if (introPanel?.hidden) {
-          setGuide("Type a search brief to begin, then press Find.", promptBox, "search");
+          setGuide("Type a brief, then press Find.", promptBox, "search");
         } else {
-          setGuide("New here? Choose a demo prompt, or type your own search brief to begin.", demoPromptSelect, "demo");
+          setGuide("Choose a demo, or type a brief.", demoPromptSelect, "demo");
         }
       } else if (currentWorkflowStep === 0) {
-        setGuide("Good. Press Find to get the current basic snapshot from live listing data.", button, "search");
+        setGuide("Press Find.", button, "search");
       } else if (currentWorkflowStep === 1) {
-        setGuide("This is the quick snapshot. Pick the highlighted AI scenario to build the full analysis.", preferredScenarioButton(), "ai");
+        setGuide("Pick a scenario.", preferredScenarioButton(), "ai");
       } else if (currentWorkflowStep === 2) {
-        setGuide("Scenario ranking is ready. Build the report to turn the shortlist into market-backed reasoning.", aiReportButton, "ai");
+        setGuide("Build the report.", aiReportButton, "ai");
       } else {
-        setGuide("Report is ready. Create a client report, an agent plan, or both.", [clientReportButton, agentPlanButton], "ai");
+        setGuide("Open client report or agent plan.", [clientReportButton, agentPlanButton], "ai");
       }
     }
     function setWorkflowStep(doneUpTo) {
@@ -506,10 +506,35 @@
       if (n >= 40) return "mid";
       return "low";
     }
+    function firstText(...values) {
+      return values.map((value) => String(value || "").trim()).find(Boolean) || "";
+    }
+    function reasonLine(label, value) {
+      const text = String(value || "").trim();
+      return text ? `<div class="reasons"><strong>${label}:</strong> ${escapeHtml(text)}</div>` : "";
+    }
 
     function renderListings(items, purposeValue) {
-      return items.map((item) => `
-        <article class="listing">
+      return items.map((item) => {
+        const leadReason = firstText(item.ai_fit_summary, item.ai_opportunity_angle, item.match_reasons, item.outdoor_matches);
+        const imageUrl = firstText(item.image_url);
+        const listingClass = imageUrl ? "listing listing--with-image" : "listing";
+        const imageHtml = imageUrl ? `
+          <a class="listing-media" href="${escapeHtml(item.url || imageUrl)}" target="_blank" rel="noreferrer" aria-label="Open listing">
+            <img src="${escapeHtml(imageUrl)}" alt="${escapeHtml(item.title || "Property image")}" loading="lazy" referrerpolicy="no-referrer">
+          </a>` : "";
+        const detailReasons = [
+          reasonLine("Summary", item.ai_fit_summary),
+          reasonLine("Opportunity", item.ai_opportunity_angle),
+          reasonLine("Strengths", item.ai_strengths),
+          reasonLine("Concerns", item.ai_concerns),
+          reasonLine("Verify", item.ai_verify),
+          item.match_reasons ? `<div class="reasons">${escapeHtml(item.match_reasons)}</div>` : "",
+          reasonLine("Clues", item.outdoor_matches),
+        ].filter(Boolean).join("");
+        return `
+        <article class="${listingClass}">
+          ${imageHtml}
           <div>
             <h2>${item.title || "Untitled listing"}</h2>
             <div class="facts">
@@ -520,13 +545,8 @@
               <span class="pill">${item.predicted_type || "Type unknown"}</span>
               <span class="pill">${item.property_size_sqft || "?"} sqft</span>
             </div>
-            ${item.ai_fit_summary ? `<div class="reasons"><strong>Summary:</strong> ${item.ai_fit_summary}</div>` : ""}
-            ${item.ai_opportunity_angle ? `<div class="reasons"><strong>Opportunity:</strong> ${item.ai_opportunity_angle}</div>` : ""}
-            ${item.ai_strengths ? `<div class="reasons"><strong>Strengths:</strong> ${item.ai_strengths}</div>` : ""}
-            ${item.ai_concerns ? `<div class="reasons"><strong>Concerns:</strong> ${item.ai_concerns}</div>` : ""}
-            ${item.ai_verify ? `<div class="reasons"><strong>Verify:</strong> ${item.ai_verify}</div>` : ""}
-            ${item.match_reasons ? `<div class="reasons">${item.match_reasons}</div>` : ""}
-            ${item.outdoor_matches ? `<div class="reasons"><strong>Clues:</strong> ${item.outdoor_matches}</div>` : ""}
+            ${leadReason ? `<div class="reasons lead-reason">${escapeHtml(leadReason)}</div>` : ""}
+            ${detailReasons ? `<details class="listing-details"><summary>Details</summary>${detailReasons}</details>` : ""}
             ${item.has_exclusive_warning ? `<div class="exclusive-box"><strong>Exclusive listing:</strong> likely strong agent-owner relationship. Avoid owner call unless you have another clear lead.</div>` : ""}
             ${item.similar_count > 1 ? `
               <div class="similar-box">
@@ -545,12 +565,21 @@
             </div>
           </div>
           <div class="score"><span class="score-badge ${scoreBadgeClass(item.match_score)}">${item.match_score}</span></div>
-        </article>`).join("");
+        </article>`;
+      }).join("");
     }
 
     function renderBasicSnapshot(items, purposeValue) {
-      return (items || []).slice(0, 3).map((item, index) => `
-        <article class="listing snapshot-listing">
+      return (items || []).slice(0, 3).map((item, index) => {
+        const imageUrl = firstText(item.image_url);
+        const listingClass = imageUrl ? "listing snapshot-listing listing--with-image" : "listing snapshot-listing";
+        const imageHtml = imageUrl ? `
+          <a class="listing-media snapshot-media" href="${escapeHtml(item.url || imageUrl)}" target="_blank" rel="noreferrer" aria-label="Open listing">
+            <img src="${escapeHtml(imageUrl)}" alt="${escapeHtml(item.title || "Property image")}" loading="lazy" referrerpolicy="no-referrer">
+          </a>` : "";
+        return `
+        <article class="${listingClass}">
+          ${imageHtml}
           <div>
             <h2>${index + 1}. ${item.title || "Untitled listing"}</h2>
             <div class="facts">
@@ -566,7 +595,8 @@
             </div>
           </div>
           <div class="score"><span class="score-badge ${scoreBadgeClass(item.match_score)}">${item.match_score}</span></div>
-        </article>`).join("");
+        </article>`;
+      }).join("");
     }
 
     async function copyText(value, btn) {
@@ -1219,6 +1249,34 @@
       reportWindow.document.close();
     }
 
+    function renderAiProgress(message, percent) {
+      const pct = Math.max(0, Math.min(100, Math.round(percent)));
+      aiPanel.hidden = false;
+      aiPanel.innerHTML = `
+        <div class="ai-progress">
+          <div class="ai-progress-top">
+            <span>${escapeHtml(message)}</span>
+            <strong>${pct}%</strong>
+          </div>
+          <div class="ai-progress-track" aria-label="Estimated progress">
+            <span style="width:${pct}%"></span>
+          </div>
+          <div class="ai-progress-note">Estimated progress. The request is still running.</div>
+        </div>`;
+    }
+
+    function startAiProgress(messages, intervalMs = 7000) {
+      let msgIdx = 0;
+      let percent = 8;
+      renderAiProgress(messages[0], percent);
+      return setInterval(() => {
+        msgIdx = Math.min(msgIdx + 1, messages.length - 1);
+        const target = Math.min(92, 12 + msgIdx * 13);
+        percent = Math.min(92, Math.max(percent + 7, target));
+        renderAiProgress(messages[msgIdx], percent);
+      }, intervalMs);
+    }
+
     function renderAgentPlan(plan, reportWindow) {
       const actions = Array.isArray(plan.priority_actions) ? plan.priority_actions : [];
       const checklist = Array.isArray(plan.scenario_checklist) ? plan.scenario_checklist : [];
@@ -1370,8 +1428,13 @@
       agentPlanButton.disabled = true;
       agentPlanButton.textContent = "Planning...";
       error.hidden = true;
-      aiPanel.hidden = false;
-      aiPanel.textContent = "Turning the built report into actions, call angles and verification logic...";
+      const progressId = startAiProgress([
+        "Turning the built report into actions, call angles and verification logic...",
+        "Reviewing ranked listings...",
+        "Building action priorities...",
+        "Writing call angles and verification questions...",
+        "Still working. This can take a couple of minutes...",
+      ], 6500);
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 240000);
       try {
@@ -1396,6 +1459,7 @@
         writeReportError(reportWindow, "Agent plan failed", error.textContent);
         aiPanel.hidden = true;
       } finally {
+        clearInterval(progressId);
         clearTimeout(timeoutId);
         if (!agentPlanOpened) {
           agentPlanButton.disabled = false;
@@ -1634,8 +1698,13 @@
       clientReportButton.disabled = true;
       clientReportButton.textContent = "Writing…";
       error.hidden = true;
-      aiPanel.hidden = false;
-      aiPanel.textContent = "Writing a client-safe report from the built report shortlist...";
+      const progressId = startAiProgress([
+        "Writing a client-safe report from the built report shortlist...",
+        "Structuring market evidence...",
+        "Preparing inventory comparison...",
+        "Writing strategic assessment...",
+        "Still working. This can take a couple of minutes...",
+      ], 6500);
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 240000);
       try {
@@ -1662,6 +1731,7 @@
         writeReportError(reportWindow, "Client report failed", error.textContent);
         aiPanel.hidden = true;
       } finally {
+        clearInterval(progressId);
         clearTimeout(timeoutId);
         if (!clientReportOpened) {
           clientReportButton.disabled = false;
@@ -1681,9 +1751,7 @@
       reportToolbar.hidden = true;
       aiPanel.hidden = false;
       const messages = [progressStart, "Adding relevant DXB market comps...", "Sending small batches to OpenAI...", "Ranking shortlist batches...", "Comparing batch winners with market comps...", "Building final enquiry report...", "Still working. This can take a couple of minutes..."];
-      let msgIdx = 0;
-      aiPanel.textContent = messages[0];
-      const progressId = setInterval(() => { msgIdx = Math.min(msgIdx + 1, messages.length - 1); aiPanel.textContent = messages[msgIdx]; }, 7000);
+      const progressId = startAiProgress(messages, 7000);
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 300000);
       try {
@@ -1971,7 +2039,7 @@
     demoDismiss?.addEventListener("click", () => {
       if (introPanel) introPanel.hidden = true;
       if (!promptBox.value.trim()) {
-        setGuide("Type a search brief to begin, then press Find.", promptBox, "search");
+        setGuide("Type a brief, then press Find.", promptBox, "search");
       }
     });
     guidedDemoClose?.addEventListener("click", () => {
@@ -1991,4 +2059,4 @@
     // Set initial state on page load
     setAiScenarioAvailability("auto");
     setWorkflowStep(0);
-    showIntroModal();
+    // Keep the app search-first; the intro modal remains available in markup but does not block first use.

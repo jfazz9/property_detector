@@ -477,11 +477,20 @@ def page_for_result(
         for item in result["matches"]:
             title = escape(str(item.get("title") or "Untitled listing"))
             listing_url = escape(str(item.get("url") or "#"))
+            image_url = escape(str(item.get("image_url") or ""))
+            listing_class = "listing listing--with-image" if image_url else "listing"
+            image_html = (
+                f'<a class="listing-media" href="{listing_url}" target="_blank" rel="noreferrer" aria-label="Open listing">'
+                f'<img src="{image_url}" alt="{title}" loading="lazy" referrerpolicy="no-referrer"></a>'
+                if image_url
+                else ""
+            )
             reasons = escape(str(item.get("match_reasons") or ""))
             clues = escape(str(item.get("outdoor_matches") or ""))
             clue_html = f'<div class="reasons"><strong>Clues:</strong> {clues}</div>' if clues else ""
             results_html += f"""
-        <article class="listing">
+        <article class="{listing_class}">
+          {image_html}
           <div>
             <h2>{title}</h2>
             <div class="facts">
@@ -511,11 +520,20 @@ def page_for_result(
         for item in over_budget_matches:
             title = escape(str(item.get("title") or "Untitled listing"))
             listing_url = escape(str(item.get("url") or "#"))
+            image_url = escape(str(item.get("image_url") or ""))
+            listing_class = "listing listing--with-image" if image_url else "listing"
+            image_html = (
+                f'<a class="listing-media" href="{listing_url}" target="_blank" rel="noreferrer" aria-label="Open listing">'
+                f'<img src="{image_url}" alt="{title}" loading="lazy" referrerpolicy="no-referrer"></a>'
+                if image_url
+                else ""
+            )
             reasons = escape(str(item.get("match_reasons") or ""))
             clues = escape(str(item.get("outdoor_matches") or ""))
             clue_html = f'<div class="reasons"><strong>Clues:</strong> {clues}</div>' if clues else ""
             above_budget_html += f"""
-        <article class="listing">
+        <article class="{listing_class}">
+          {image_html}
           <div>
             <h2>{title}</h2>
             <div class="facts">

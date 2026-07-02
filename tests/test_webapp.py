@@ -12,6 +12,7 @@ from scripts.webapp import (
     lookup_owner_in_df,
     match_enquiry,
     match_prompt,
+    page_for_result,
     parse_prompt,
     quick_listing_query,
     rows_payload,
@@ -793,6 +794,7 @@ def test_rows_payload_flags_exclusive_listings_without_leaking_description():
             "annual_rent": 255000,
             "bedrooms": 3,
             "url": "https://example.com/exclusive",
+            "image_url": "https://img.example.com/home.jpg",
             "match_score": 66,
         }
     ])
@@ -801,7 +803,40 @@ def test_rows_payload_flags_exclusive_listings_without_leaking_description():
 
     assert payload[0]["has_exclusive_warning"] is True
     assert payload[0]["price"] == 255000
+    assert payload[0]["image_url"] == "https://img.example.com/home.jpg"
     assert "description_json" not in payload[0]
+
+
+def test_page_for_result_renders_listing_image():
+    page = page_for_result({
+        "enquiry": {
+            "purpose": "sale",
+            "budget": 5_500_000,
+            "stretch_budget": 5_940_000,
+            "bedrooms_label": "4",
+            "community": "Casa",
+            "search_intent": "best_value",
+        },
+        "client_response": "Found one listing.",
+        "matches": [
+            {
+                "title": "Sale in Casa: Family villa",
+                "url": "https://example.com/listing",
+                "image_url": "https://img.example.com/casa.jpg",
+                "price": 5_500_000,
+                "bedrooms": 4,
+                "bathrooms": 4,
+                "predicted_community": "Casa",
+                "predicted_type": "Type 2",
+                "property_size_sqft": 3234,
+                "match_score": 88,
+            }
+        ],
+        "over_budget_matches": [],
+    })
+
+    assert 'class="listing listing--with-image"' in page
+    assert 'src="https://img.example.com/casa.jpg"' in page
 
 
 def test_ai_fallback_prompt_ranks_only_fallback_options(monkeypatch):
